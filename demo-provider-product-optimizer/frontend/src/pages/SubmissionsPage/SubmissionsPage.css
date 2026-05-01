@@ -1,0 +1,174 @@
+.submissions-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.submissions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  min-width: 0;
+}
+
+.submissions-header h1 {
+  margin: 0;
+  color: #333;
+  font-size: 2rem;
+}
+
+.submissions-header-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.submissions-header .create-button {
+  padding: 0.75rem 1.25rem;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
+  width: auto;
+  height: auto;
+}
+
+.submissions-header .create-icon {
+  display: inline-block;
+  font-size: 1.125rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.submissions-header .create-text {
+  display: inline-block;
+  line-height: 1.5;
+}
+
+.submissions-header .create-button:hover {
+  background: #218838;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.submissions-header .create-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submissions-header .create-button:focus {
+  outline: 2px solid #28a745;
+  outline-offset: 2px;
+}
+
+.submissions-header .refresh-button {
+  padding: 0.75rem 1.25rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  line-height: 1.5;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: fit-content;
+  width: auto;
+  height: auto;
+}
+
+.submissions-header .refresh-icon {
+  display: inline-block;
+  font-size: 1.125rem;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.submissions-header .refresh-text {
+  display: inline-block;
+  line-height: 1.5;
+}
+
+.submissions-header .refresh-button:hover {
+  background: #357abd;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.submissions-header .refresh-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.submissions-header .refresh-button:focus {
+  outline: 2px solid #4a90e2;
+  outline-offset: 2px;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: 3rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  color: #e74c3c;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.retry-button:hover {
+  background: #357abd;
+}
+
+.submissions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+@media (max-width: 768px) {
+  .submissions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .submissions-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}
