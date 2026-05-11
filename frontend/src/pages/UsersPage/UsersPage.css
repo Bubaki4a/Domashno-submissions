@@ -1,0 +1,149 @@
+.users-page {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.users-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.users-page-header h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.users-add-btn {
+  padding: 0.6rem 1.2rem;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+
+.users-add-btn:hover {
+  background: #357abd;
+}
+
+.users-error {
+  padding: 0.75rem;
+  background: #fee;
+  color: #c33;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.users-loading {
+  color: #666;
+}
+
+.users-table-wrap {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #eee;
+}
+
+.users-table th {
+  background: #f8f9fa;
+  font-weight: 600;
+  color: #444;
+  font-size: 0.9rem;
+}
+
+.users-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.users-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.users-modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.users-modal-content h2 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.25rem;
+}
+
+.users-modal-content form label {
+  display: block;
+  margin-bottom: 1rem;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.users-modal-content form input,
+.users-modal-content form select {
+  display: block;
+  width: 100%;
+  margin-top: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+.users-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.users-modal-actions button {
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.users-modal-actions button[type="button"] {
+  background: #eee;
+  border: none;
+  color: #555;
+}
+
+.users-modal-actions button[type="submit"] {
+  background: #4a90e2;
+  color: white;
+  border: none;
+}
+
+.users-modal-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}

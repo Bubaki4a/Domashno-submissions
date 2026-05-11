@@ -1,0 +1,100 @@
+.profile-page {
+  padding: 1.5rem;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.profile-page h1 {
+  margin: 0 0 1.25rem 0;
+  font-size: 1.75rem;
+  color: #1a1a2e;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.profile-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-weight: 500;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.profile-form input {
+  padding: 0.75rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.profile-form input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.15);
+}
+
+.profile-form input:disabled {
+  background: #f0f0f0;
+  cursor: not-allowed;
+}
+
+.profile-error {
+  padding: 0.75rem;
+  background: #fee;
+  color: #c33;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.profile-success {
+  padding: 0.75rem;
+  background: #efe;
+  color: #363;
+  border-radius: 8px;
+  font-size: 0.9rem;
+}
+
+.profile-password-section {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0;
+}
+
+.profile-password-section legend {
+  padding: 0 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.profile-submit {
+  padding: 0.85rem 1.5rem;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.05s;
+  margin-top: 0.25rem;
+}
+
+.profile-submit:hover:not(:disabled) {
+  opacity: 0.95;
+}
+
+.profile-submit:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.profile-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
