@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Layout } from './components/Layout/Layout';
 import { HomePage } from './pages/HomePage/HomePage';
 import { SubmissionsPage } from './pages/SubmissionsPage/SubmissionsPage';
+import { ProvidersPage } from './pages/ProvidersPage/ProvidersPage';
 import './App.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'submissions'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'submissions' | 'providers'>('home');
 
   useEffect(() => {
     // Handle hash-based routing
@@ -13,6 +14,8 @@ function App() {
       const hash = window.location.hash;
       if (hash === '#submissions') {
         setCurrentPage('submissions');
+      } else if (hash === '#providers') {
+        setCurrentPage('providers');
       } else if (hash.startsWith('#edit/')) {
         setCurrentPage('home');
       } else {
@@ -33,7 +36,9 @@ function App() {
 
   return (
     <Layout>
-      {currentPage === 'home' ? <HomePage /> : <SubmissionsPage />}
+      {currentPage === 'home' && <HomePage />}
+      {currentPage === 'submissions' && <SubmissionsPage />}
+      {currentPage === 'providers' && <ProvidersPage />}
     </Layout>
   );
 }

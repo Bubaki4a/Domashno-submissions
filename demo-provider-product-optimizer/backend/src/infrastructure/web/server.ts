@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express, { Express } from 'express';
 import cors from 'cors';
 import { formRouter } from '../../presentation/controllers/formController';
+import { providerRouter } from '../../presentation/controllers/providerController';
 
 const PORT = process.env.PORT || 3001;
 
@@ -28,6 +29,9 @@ export function createServer(): Express {
         updateSubmission: 'PUT /api/submissions/:id',
         deleteSubmission: 'DELETE /api/submissions/:id',
         restoreSubmission: 'POST /api/submissions/:id/restore',
+        providers: 'GET /api/providers',
+        syncProvider: 'POST /api/providers/:provider/sync',
+        normalize: 'POST /api/providers/:provider/normalize',
       },
     });
   });
@@ -39,12 +43,16 @@ export function createServer(): Express {
 
   // API routes
   app.use('/api', formRouter);
+  app.use('/api', providerRouter);
 
   // Log all registered routes for debugging
   console.log('📋 Registered API routes:');
   console.log('  POST /api/submit');
   console.log('  GET /api/submissions');
   console.log('  PUT /api/submissions/:id');
+  console.log('  GET /api/providers');
+  console.log('  POST /api/providers/:provider/sync');
+  console.log('  POST /api/providers/:provider/normalize');
 
   return app;
 }

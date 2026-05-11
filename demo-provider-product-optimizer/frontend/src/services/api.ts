@@ -5,6 +5,9 @@ import type { Response } from '../presentation/responses/Response';
 import type { CreateSubmissionResponse } from '../presentation/responses/Submission/CreateSubmissionResponse';
 import type { GetSubmissionsResponse } from '../presentation/responses/Submission/GetSubmissionsResponse';
 import type { UpdateSubmissionResponse } from '../presentation/responses/Submission/UpdateSubmissionResponse';
+import type { GetProvidersResponse, ProviderInfo } from '../presentation/responses/Provider/GetProvidersResponse';
+import type { SyncProviderResponse } from '../presentation/responses/Provider/SyncProviderResponse';
+import type { NormalizeProductsResponse } from '../presentation/responses/Provider/NormalizeProductsResponse';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
