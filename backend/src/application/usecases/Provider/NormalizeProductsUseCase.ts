@@ -65,9 +65,9 @@ export class NormalizeProductsUseCase {
 
   private normalizeProduct(product: any): NormalizedProductEntity {
     // Create normalized product with enriched data
-    const normalizedData: NormalizedProduct = {
-      id: product.id,
-      name: product.name,
+    const normalizedData: Partial<NormalizedProduct> & { id: string; name: string } = {
+      id: String(product.id),
+      name: String(product.name || product.sku || 'Unnamed Product'),
       price: product.price,
       description: product.description,
       imageUrl: product.imageUrl,

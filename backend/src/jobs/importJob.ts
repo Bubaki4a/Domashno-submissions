@@ -4,6 +4,7 @@ import { ProcessProductsUseCase } from '../application/usecases/Provider/Process
 import { GetProvidersUseCase } from '../application/usecases/Provider/GetProvidersUseCase';
 import { createProductRepository, createProviderRepository } from '../infrastructure/repositories/repositoryFactory';
 import { EasyGiftsProvider } from '../infrastructure/providers/EasyGiftsProvider';
+import { MidoceanProvider } from '../infrastructure/providers/MidoceanProvider';
 import { runJob } from './jobRunner';
 import type { JobContext } from './jobRunner';
 import { HttpClient } from '../infrastructure/http/httpClient';
@@ -22,6 +23,13 @@ function createProvider(providerName: string): IProvider {
       const apiUrl = process.env.EASYGIFTS_API_URL;
       if (!apiUrl) throw new Error('EASYGIFTS_API_URL is not set');
       return new EasyGiftsProvider(httpClient, apiUrl);
+    }
+    case 'midocean': {
+      const apiUrl = process.env.MIDOCEAN_API_URL;
+      const apiKey = process.env.MIDOCEAN_API_KEY;
+      if (!apiUrl) throw new Error('MIDOCEAN_API_URL is not set');
+      if (!apiKey) throw new Error('MIDOCEAN_API_KEY is not set');
+      return new MidoceanProvider(httpClient, apiUrl, apiKey);
     }
     default:
       throw new Error(`Unknown provider: ${providerName}`);

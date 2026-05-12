@@ -24,6 +24,8 @@ See [Setup](../docs/SETUP.md) for all variables. Critical ones:
 - `DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME` – for MySQL
 - `JWT_SECRET` – required in production
 - `EASYGIFTS_API_URL` – for EasyGifts provider sync
+- `MIDOCEAN_API_URL` – for Midocean provider sync
+- `MIDOCEAN_API_KEY` – for Midocean API authorization
 - `DEEP_INFRA_KEY` – for product enhancement (AI)
 
 Copy `backend/.env.example` to `.env` and fill in values.

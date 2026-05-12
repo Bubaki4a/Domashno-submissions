@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { IProvider } from '../../domain/providers/IProvider';
 import { EasyGiftsProvider } from '../../infrastructure/providers/EasyGiftsProvider';
+import { MidoceanProvider } from '../../infrastructure/providers/MidoceanProvider';
 import { HttpClient } from '../../infrastructure/http/httpClient';
 import { createProductRepository, createProviderRepository } from '../../infrastructure/repositories/repositoryFactory';
 import { SyncProviderUseCase } from '../../application/usecases/Provider/SyncProviderUseCase';
@@ -26,12 +27,25 @@ const createProvider = (providerName: string): IProvider => {
   const normalizedName = providerName.toLowerCase();
 
   switch (normalizedName) {
-    case 'easygifts':
+    case 'easygifts': {
       const apiUrl = process.env.EASYGIFTS_API_URL;
       if (!apiUrl) {
         throw new Error('EASYGIFTS_API_URL environment variable is not set');
       }
       return new EasyGiftsProvider(httpClient, apiUrl);
+    }
+
+    case 'midocean': {
+      const apiUrl = process.env.MIDOCEAN_API_URL;
+      const apiKey = process.env.MIDOCEAN_API_KEY;
+      if (!apiUrl) {
+        throw new Error('MIDOCEAN_API_URL environment variable is not set');
+      }
+      if (!apiKey) {
+        throw new Error('MIDOCEAN_API_KEY environment variable is not set');
+      }
+      return new MidoceanProvider(httpClient, apiUrl, apiKey);
+    }
 
     // Future providers can be added here
     // case 'anotherprovider':

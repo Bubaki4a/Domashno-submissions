@@ -50,6 +50,8 @@ Configure the backend by copying `backend/.env.example` to `backend/.env` and fi
 | `AI_PROMPT_VERSION` | Prompt version for logging | `v1` |
 | **Providers** | | |
 | `EASYGIFTS_API_URL` | EasyGifts API base URL (required for EasyGifts provider) | (required for sync) |
+| `MIDOCEAN_API_URL` | Midocean API base URL (required for Midocean provider) | (required for sync) |
+| `MIDOCEAN_API_KEY` | Midocean API key for `x-Gateway-APIKey` header | (required for sync) |
 | **Jobs (cron)** | | |
 | `CRON_ENABLED` | Enable scheduled jobs (`true` / `1`) | (disabled) |
 | `CRON_IMPORT_SCHEDULE` | Cron expression for import job | `0 */6 * * *` (every 6 hours) |

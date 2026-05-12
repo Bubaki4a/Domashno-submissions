@@ -53,7 +53,7 @@ export class HttpClient implements IHttpClient {
 
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        return await response.json();
+        return await response.json() as T;
       }
 
       return await response.text() as T;

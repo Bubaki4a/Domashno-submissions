@@ -1,5 +1,7 @@
 import { NormalizedProduct, NormalizedProductMetadata } from './NormalizedProduct';
 
+type NormalizedProductCreateData = Partial<Omit<NormalizedProduct, 'id' | 'name'>> & { id: string; name: string };
+
 export class NormalizedProductEntity {
   private constructor(
     public readonly id: string,
@@ -18,15 +20,18 @@ export class NormalizedProductEntity {
     public readonly events: string | undefined,
   ) { }
 
-  static create(data: Partial<NormalizedProduct> & { id: string; name: string }): NormalizedProductEntity {
+  static create(data: NormalizedProductCreateData): NormalizedProductEntity {
     // Validation
     if (!data.id || data.id.trim().length === 0) {
       throw new Error('NormalizedProduct ID is required');
     }
 
-    if (!data.name || data.name.trim().length === 0) {
+    const name = data.name;
+    if (!name || name.trim().length === 0) {
       throw new Error('NormalizedProduct name is required');
     }
+
+    const trimmedName = name.trim();
 
     // Validate price if provided
     if (data.price !== undefined && (typeof data.price !== 'number' || data.price < 0)) {
@@ -48,7 +53,7 @@ export class NormalizedProductEntity {
 
     return new NormalizedProductEntity(
       data.id.trim(),
-      data.name.trim(),
+      trimmedName,
       data.price,
       data.description?.trim(),
       data.imageUrl?.trim(),
@@ -65,9 +70,13 @@ export class NormalizedProductEntity {
   }
 
   static fromData(data: NormalizedProduct): NormalizedProductEntity {
+    if (!data.id || !data.name) {
+      throw new Error('NormalizedProduct id and name are required to create an entity from data');
+    }
+
     return new NormalizedProductEntity(
       data.id,
-      data.name,
+      data.name.trim(),
       data.price,
       data.description,
       data.imageUrl,

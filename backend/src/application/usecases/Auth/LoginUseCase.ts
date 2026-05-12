@@ -37,8 +37,8 @@ export class LoginUseCase {
     };
     const token = jwt.sign(
       { sub: user.id, email: user.email, role: user.role },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN },
+      JWT_SECRET as jwt.Secret,
+      { expiresIn: JWT_EXPIRES_IN as jwt.SignOptions['expiresIn'] },
     );
     return { user, token };
   }

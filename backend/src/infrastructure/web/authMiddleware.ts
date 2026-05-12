@@ -24,8 +24,12 @@ export function authMiddleware(req: AuthRequest, res: Response, next: NextFuncti
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload;
-    req.user = { id: decoded.sub, email: decoded.email, role: decoded.role };
+    const decoded = jwt.verify(token, JWT_SECRET);
+    if (typeof decoded === 'string' || !decoded || typeof decoded !== 'object') {
+      throw new Error('Invalid token payload');
+    }
+    const payload = decoded as unknown as JwtPayload;
+    req.user = { id: payload.sub, email: payload.email, role: payload.role };
     next();
   } catch {
     res.status(401).json({ success: false, error: 'Invalid or expired token' });

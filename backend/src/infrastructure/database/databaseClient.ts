@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import mysql, { Pool } from 'mysql2/promise';
+import mysql, { Pool, RowDataPacket } from 'mysql2/promise';
 
 const pool: Pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
@@ -21,8 +21,8 @@ export const databaseClient = {
    * Execute a query that returns rows.
    */
   async query<T = any>(sql: string, params?: any[]): Promise<T[]> {
-    const [rows] = await pool.query<T[]>(sql, params);
-    return rows;
+    const [rows] = await pool.query<RowDataPacket[]>(sql, params);
+    return rows as T[];
   },
 
   /**
