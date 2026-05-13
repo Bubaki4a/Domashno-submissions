@@ -1,6 +1,10 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import { IProvider } from '../../domain/providers/IProvider';
 import { ProductEntity } from '../../domain/entities/Product/ProductEntity';
 import { IHttpClient } from '../http/httpClient';
+
+const MIDOCEAN_LOCAL_SOURCE_PATH = path.resolve(process.cwd(), 'data/providers/midocean/sources/source.json');
 
 export class MidoceanProvider implements IProvider {
   private httpClient: IHttpClient;
@@ -26,32 +30,39 @@ export class MidoceanProvider implements IProvider {
 
   async fetchProducts(): Promise<any[]> {
     try {
-      const response = await this.httpClient.get<any>(this.apiUrl, {
+      console.log(`Fetching Midocean products from API: ${this.apiUrl}`);
+      
+      // Construct the request URL with query parameters
+      const url = new URL(this.apiUrl);
+      if (!url.searchParams.has('language')) {
+        url.searchParams.append('language', 'en');
+      }
+
+      // Make the API request with the API key header
+      const response = await this.httpClient.get<any>(url.toString(), {
         headers: {
           'x-Gateway-APIKey': this.apiKey,
+          'Content-Type': 'application/json',
         },
       });
 
+      // Handle various response formats
+      let data: any[];
       if (Array.isArray(response)) {
-        return response;
-      }
-      if (response && Array.isArray(response.products)) {
-        return response.products;
-      }
-      if (response && Array.isArray(response.data)) {
-        return response.data;
-      }
-      if (response && Array.isArray(response.results)) {
-        return response.results;
-      }
-      if (response && response.response && Array.isArray(response.response.products)) {
-        return response.response.products;
+        data = response;
+      } else if (response && typeof response === 'object' && Array.isArray(response.products)) {
+        data = response.products;
+      } else if (response && typeof response === 'object' && Array.isArray(response.data)) {
+        data = response.data;
+      } else {
+        throw new Error('Unexpected API response format - expected array or object with products/data array');
       }
 
-      throw new Error('Unexpected Midocean response format. Expected JSON array or object with products/data/results');
+      console.log(`Successfully loaded ${data.length} products from Midocean API`);
+      return data;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Failed to fetch Midocean products: ${errorMessage}`);
+      console.error(`Failed to fetch Midocean products from API (${this.apiUrl}):`, errorMessage);
       throw new Error(`Failed to fetch Midocean products: ${errorMessage}`);
     }
   }

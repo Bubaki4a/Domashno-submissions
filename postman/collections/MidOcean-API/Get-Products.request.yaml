@@ -1,0 +1,11 @@
+$kind: http-request
+name: Get Products
+method: GET
+url: 'https://api.midocean.com/gateway/products/2.0?language=en'
+order: 1000
+queryParams:
+  - key: language
+    value: en
+headers:
+  - key: x-Gateway-APIKey
+    value: '68586d93-82fb-48cf-b18e-a0dba69f12a2'
