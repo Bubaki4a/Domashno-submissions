@@ -1,6 +1,7 @@
 import { Response } from '../Response';
 
 export interface ProviderInfo {
+  id: number;
   name: string;
   displayName: string;
   isConfigured: boolean;
@@ -16,6 +17,7 @@ export class GetProvidersResponse extends Response {
     success: boolean = true,
     message: string = 'Providers retrieved successfully'
   ) {
+    // Тук изпращаме обекта към базовия клас Response
     super(success, { providers }, message);
     this.providers = providers;
   }

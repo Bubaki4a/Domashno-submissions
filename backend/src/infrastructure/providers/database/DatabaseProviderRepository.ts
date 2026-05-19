@@ -4,10 +4,33 @@ import { IProviderRepository } from '../interfaces/IProviderRepository';
 
 /**
  * Database-backed implementation of IProviderRepository.
- * Stores provider sources as JSON blobs keyed by a generated filename-like identifier.
+ * Handles both provider configurations and raw source storage.
  */
 export class DatabaseProviderRepository implements IProviderRepository {
-  private readonly tableName = 'provider_sources';
+  private readonly sourcesTable = 'provider_sources';
+  private readonly providersTable = 'providers';
+
+  /**
+   * Първа задача: Извличане на всички доставчици от базата данни
+   */
+  async findAllProviders(): Promise<any[]> {
+  return await databaseClient.query<any>(
+    `SELECT id, slug, display_name as displayName, is_configured as isConfigured, last_sync as lastSync 
+     FROM ${this.providersTable} 
+     ORDER BY display_name ASC`
+  );
+}
+
+  /**
+   * Извличане на конкретен доставчик по ID
+   */
+  async findProviderById(id: string): Promise<any | null> {
+    const rows = await databaseClient.query<any>(
+      `SELECT * FROM ${this.providersTable} WHERE id = ? LIMIT 1`,
+      [id]
+    );
+    return rows.length ? rows[0] : null;
+  }
 
   /**
    * Creates a filename-like identifier similar to the file-based implementation.
@@ -38,25 +61,44 @@ export class DatabaseProviderRepository implements IProviderRepository {
     };
 
     const pool = databaseClient.getPool();
-    await pool.execute(
-      `INSERT INTO ${this.tableName} (
-        provider_id,
-        filename,
-        provider,
-        timestamp,
-        products
-      )
-      VALUES (?, ?, ?, ?, ?)`,
-      [
-        providerId,
-        filename,
-        provider,
-        timestamp,
-        JSON.stringify(source.products),
-      ],
-    );
+    const connection = await pool.getConnection();
 
-    return filename;
+    try {
+      await connection.beginTransaction();
+
+      // 1. Записваме самия източник (raw JSON)
+      await connection.execute(
+        `INSERT INTO ${this.sourcesTable} (
+          provider_id,
+          filename,
+          provider,
+          timestamp,
+          products
+        )
+        VALUES (?, ?, ?, ?, ?)`,
+        [
+          providerId,
+          filename,
+          provider,
+          timestamp,
+          JSON.stringify(source.products),
+        ],
+      );
+
+      // 2. Обновяваме последната синхронизация в таблицата providers
+      await connection.execute(
+        `UPDATE ${this.providersTable} SET last_sync = ? WHERE id = ?`,
+        [timestamp, providerId]
+      );
+
+      await connection.commit();
+      return filename;
+    } catch (error) {
+      await connection.rollback();
+      throw error;
+    } finally {
+      connection.release();
+    }
   }
 
   async readSource(
@@ -69,7 +111,7 @@ export class DatabaseProviderRepository implements IProviderRepository {
         provider,
         timestamp,
         products
-      FROM ${this.tableName}
+      FROM ${this.sourcesTable}
       WHERE provider_id = ? AND filename = ?
       LIMIT 1
       `,
@@ -114,7 +156,7 @@ export class DatabaseProviderRepository implements IProviderRepository {
     const rows = await databaseClient.query<any>(
       `
       SELECT filename
-      FROM ${this.tableName}
+      FROM ${this.sourcesTable}
       ${whereClause}
       ORDER BY timestamp DESC
       `,
@@ -124,4 +166,3 @@ export class DatabaseProviderRepository implements IProviderRepository {
     return rows.map((row) => row.filename as string);
   }
 }
-
