@@ -6,6 +6,7 @@ export class ProcessProductsUseCase {
 
   async execute(
     provider: IProvider,
+    providerId: number, // Променено на number
     rawProducts: any[]
   ): Promise<{
     processedCount: number;
@@ -14,23 +15,17 @@ export class ProcessProductsUseCase {
     const errors: string[] = [];
     let processedCount = 0;
 
-    const providerId = provider.getName().toLowerCase();
-
     for (const rawProduct of rawProducts) {
       try {
-        // Transform raw product to ProductEntity
         const productEntity = provider.transformProduct(rawProduct);
 
-        // Save product to repository
-        await this.productRepository.save(providerId, productEntity);
+        // Записваме в базата, като предаваме числото (MySQL ще го приеме в INT колоната)
+        await this.productRepository.save(providerId.toString(), productEntity);
 
         processedCount++;
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        const errorStack = error instanceof Error ? error.stack : undefined;
-        const productId = rawProduct?.id || rawProduct?.productId || 'unknown';
-        const fullError = errorStack ? `${errorMessage}\n${errorStack}` : errorMessage;
-        console.error(`Failed to process product ${productId}:`, fullError);
+        const productId = rawProduct?.master_code || rawProduct?.id || 'unknown';
         errors.push(`Failed to process product ${productId}: ${errorMessage}`);
       }
     }

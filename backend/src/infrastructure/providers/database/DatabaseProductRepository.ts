@@ -124,6 +124,13 @@ export class DatabaseProductRepository implements IProductRepository {
     );
   }
 
+  async deleteNormalized(providerId: string, productId: string): Promise<void> {
+    await databaseClient.query(
+      `DELETE FROM ${this.normalizedTable} WHERE provider_id = ? AND product_id = ?`,
+      [providerId, productId]
+    );
+  }
+
   async findNormalized(providerId: string, id: string): Promise<NormalizedProduct | null> {
     const rows = await databaseClient.query<any>(
       `SELECT product_id AS productId, name, price, description, image_url AS imageUrl, category, sku, stock, provider, 

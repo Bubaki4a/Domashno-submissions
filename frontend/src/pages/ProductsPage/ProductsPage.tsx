@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../contexts/AuthContext'; // Добавен импорт на AuthContext
 import type { Product } from '../../domain/entities/Product/Product';
 import type { ProviderInfo } from '../../presentation/responses/Provider/GetProvidersResponse';
 import './ProductsPage.css';
 
 export const ProductsPage: React.FC = () => {
+  const { user } = useAuth(); // Взимаме потребителя от контекста
+  const isAdmin = user?.role === 'administrator';
+
   const [products, setProducts] = useState<Product[]>([]);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,6 +60,24 @@ export const ProductsPage: React.FC = () => {
     const providerId = p.providerId || p.provider || '';
     if (providerId && p.id) {
       window.location.hash = `#products/edit/${encodeURIComponent(providerId)}/${encodeURIComponent(p.id)}`;
+    }
+  };
+
+  // Нова функция за изтриване
+  const handleDelete = async (p: Product) => {
+    const providerId = p.providerId || p.provider || '';
+    if (!providerId || !p.id) return;
+
+    if (!window.confirm(`Are you sure you want to delete the normalization data for "${p.name}"?`)) {
+      return;
+    }
+
+    try {
+      await apiService.deleteProduct(providerId, p.id);
+      // Презареждаме списъка веднага след успешно изтриване
+      fetchProducts(); 
+    } catch (err) {
+      alert(err instanceof Error ? err.message : 'Failed to delete product');
     }
   };
 
@@ -147,7 +169,7 @@ export const ProductsPage: React.FC = () => {
                     <th>Catalog number</th>
                     <th>Price</th>
                     <th>Provider</th>
-                    <th></th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -158,7 +180,7 @@ export const ProductsPage: React.FC = () => {
                       <td>{p.sku ?? '—'}</td>
                       <td>{p.price != null ? `${Number(p.price).toFixed(2)}` : '—'}</td>
                       <td>{p.providerId ?? p.provider ?? '—'}</td>
-                      <td>
+                      <td className="product-actions-cell">
                         <button
                           type="button"
                           className="product-edit-btn"
@@ -167,6 +189,18 @@ export const ProductsPage: React.FC = () => {
                         >
                           Edit
                         </button>
+                        
+                        {/* Бутонът за изтриване се показва само за администратори */}
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            className="product-delete-btn"
+                            onClick={() => handleDelete(p)}
+                            title="Delete normalized product"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

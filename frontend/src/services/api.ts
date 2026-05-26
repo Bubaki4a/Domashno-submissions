@@ -131,6 +131,12 @@ class ApiService {
     return response;
   }
 
+  async deleteProduct(providerId: string, id: string): Promise<void> {
+  await this.request(`/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
   // Product methods
   async getProducts(params?: { category?: string; name?: string; catalogNumber?: string; providerId?: string }): Promise<Product[]> {
     const searchParams = new URLSearchParams();
@@ -247,6 +253,18 @@ class ApiService {
     })) as unknown as { resetCount: number };
     return { resetCount: response.resetCount ?? 0 };
   }
+
+  async refreshToken(): Promise<string> {
+  const response = await this.request<{ token: string }>('/auth/refresh-token', {
+    method: 'POST',
+  });
+
+  if (!response.data || !response.data.token) {
+    throw new Error('Server returned empty token data');
+  }
+
+  return response.data.token;
+}
 }
 
 export interface PipelineRun {

@@ -18,6 +18,7 @@ export interface IProductRepository {
   findNormalized(providerId: string, id: string): Promise<NormalizedProduct | null>;
   findAllNormalized(providerId?: string): Promise<NormalizedProduct[]>;
   findAllWithNormalized(providerId?: string): Promise<{ product: Product; hasNormalized: boolean }[]>;
+  deleteNormalized(providerId: string, productId: string): Promise<void>;
   findByAiStatus(
     status: AiStatus,
     providerId?: string,

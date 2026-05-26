@@ -11,34 +11,35 @@ export class GetProvidersUseCase {
   async execute(): Promise<ProviderInfo[]> {
     const providers: ProviderInfo[] = [];
 
-    // Задача 1: Взимане на доставчиците от базата данни
+    // Взимаме доставчиците от БД (id, slug, display_name, api_url, last_sync, is_configured)
     const dbProviders = await this.providerRepository.findAllProviders();
 
     for (const provider of dbProviders) {
-      // Използваме съществуващата логика за броя продукти
+      // Важно: използваме числовото id (1, 2...) за броене
       const productsCount = await this.getProductsCount(provider.id);
 
       providers.push({
         id: provider.id,
-        name: provider.slug,
+        name: provider.slug, // 'midocean'
         displayName: provider.displayName,
-        isConfigured: !!provider.api_url,
+        // Вече гледаме базата, а не .env файла
+        isConfigured: Boolean(provider.isConfigured), 
         lastSync: provider.lastSync ? new Date(provider.lastSync).toISOString() : undefined,
-        productsCount,
+        productsCount: productsCount,
       });
     }
 
     return providers;
   }
 
-  private async getProductsCount(key: string): Promise<number | undefined> {
+  private async getProductsCount(providerId: number): Promise<number | undefined> {
     try {
-      const providerId = key.toLowerCase();
-      const products = await this.productRepository.findAll(providerId);
-      return products.length > 0 ? products.length : undefined;
+      // Търсим в таблица products/normalized по числовото ID
+      const products = await this.productRepository.findAll(providerId.toString());
+      return products.length;
     } catch (error) {
-      console.error(`Failed to get products count for ${key}:`, error);
-      return undefined;
+      console.error(`Failed to get products count for provider ${providerId}:`, error);
+      return 0;
     }
   }
 }

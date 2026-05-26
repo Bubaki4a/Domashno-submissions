@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from '../domain/entities/User/User';
+import { apiService } from '../services/api';
 
 const TOKEN_KEY = 'product_optimizer_token';
 
@@ -70,6 +71,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       .catch(() => logout())
       .finally(() => setLoading(false));
   }, [token, logout]);
+
+  const regenerateToken = async () => {
+  try {
+    const newToken = await apiService.refreshToken();
+    localStorage.setItem('product_optimizer_token', newToken); 
+    alert('Token regenerated successfully!');
+  } catch (err) {
+    console.error('Failed to refresh token', err);
+  }
+};
 
   const value: AuthContextValue = {
     user,

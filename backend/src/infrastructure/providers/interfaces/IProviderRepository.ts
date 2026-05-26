@@ -5,4 +5,5 @@ export interface IProviderRepository {
   readSource(providerId: string, filename: string): Promise<ProviderSource | null>;
   getAllSourceFiles(providerId?: string): Promise<string[]>;
   findAllProviders(): Promise<any[]>;
+  findProviderBySlug(slug: string): Promise<any | null>;
 }

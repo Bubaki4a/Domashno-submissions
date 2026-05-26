@@ -160,3 +160,28 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+.product-actions-cell {
+  display: flex;
+  gap: 8px;
+}
+
+.product-delete-btn {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background-color 0.2s;
+}
+
+.product-delete-btn:hover {
+  background-color: #d32f2f;
+}
+
+.product-edit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

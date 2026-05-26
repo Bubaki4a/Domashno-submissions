@@ -1,3 +1,5 @@
+import { promises as fs } from 'fs';
+import path from 'path';
 import { IProvider } from '../../../domain/providers/IProvider';
 import { IProviderRepository } from '../../../infrastructure/providers/interfaces/IProviderRepository';
 import { ProcessProductsUseCase } from './ProcessProductsUseCase';
@@ -5,6 +7,7 @@ import { ProcessProductsUseCase } from './ProcessProductsUseCase';
 export class SyncProviderUseCase {
   constructor(
     private provider: IProvider,
+    private providerId: number, // Добавено: Числовото ID от базата
     private providerRepository: IProviderRepository,
     private processProductsUseCase: ProcessProductsUseCase
   ) { }
@@ -23,35 +26,39 @@ export class SyncProviderUseCase {
     let sourceFilename = '';
 
     try {
-      // Fetch products from provider
       const rawProducts = await this.provider.fetchProducts();
       productsCount = rawProducts.length;
 
       if (productsCount === 0) {
-        return {
-          success: true,
-          provider: this.provider.getName(),
-          sourceFilename: '',
-          productsCount: 0,
-          processedCount: 0,
-          errors: ['No products found from provider'],
-        };
+        return { success: true, provider: this.provider.getName(), sourceFilename: '', productsCount: 0, processedCount: 0, errors: ['No products found'] };
       }
 
-      // Save source file with timestamp
-      const providerId = this.provider.getName().toLowerCase();
+      // Използваме името за папката (slug), но ID-то за базата
+      const providerSlug = this.provider.getName().toLowerCase();
+
+      // --- DEBUG MIRROR: Записваме source.json за проверка ---
+      try {
+        const debugPath = path.resolve(process.cwd(), `data/providers/${providerSlug}/sources`);
+        await fs.mkdir(debugPath, { recursive: true });
+        await fs.writeFile(path.join(debugPath, 'source.json'), JSON.stringify(rawProducts, null, 2));
+      } catch (e) {
+        console.warn('Failed to write debug source.json file');
+      }
+
+      // Save to primary repository (MySQL) - използваме числовото ID
       sourceFilename = await this.providerRepository.saveSource(
-        providerId,
+        this.providerId.toString(), 
         this.provider.getName(),
         rawProducts
       );
 
-      // Process and save products
+      // Стартираме процесирането с числовото ID
       const processResult = await this.processProductsUseCase.execute(
-        this.provider,
+        this.provider, 
+        this.providerId, 
         rawProducts
       );
-
+      
       processedCount = processResult.processedCount;
       errors.push(...processResult.errors);
 
@@ -65,18 +72,8 @@ export class SyncProviderUseCase {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      const errorStack = error instanceof Error ? error.stack : undefined;
-      console.error(`Sync failed for provider ${this.provider.getName()}:`, errorMessage, errorStack);
       errors.push(`Sync failed: ${errorMessage}`);
-
-      return {
-        success: false,
-        provider: this.provider.getName(),
-        sourceFilename,
-        productsCount,
-        processedCount,
-        errors,
-      };
+      return { success: false, provider: this.provider.getName(), sourceFilename: '', productsCount: 0, processedCount: 0, errors };
     }
   }
 }

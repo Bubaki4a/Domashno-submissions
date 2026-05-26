@@ -14,11 +14,25 @@ export class DatabaseProviderRepository implements IProviderRepository {
    * Първа задача: Извличане на всички доставчици от базата данни
    */
   async findAllProviders(): Promise<any[]> {
-  return await databaseClient.query<any>(
-    `SELECT id, slug, display_name as displayName, is_configured as isConfigured, last_sync as lastSync 
-     FROM ${this.providersTable} 
-     ORDER BY display_name ASC`
+  const rows = await databaseClient.query<any>(
+    `SELECT 
+      id, 
+      slug, 
+      display_name as displayName, 
+      api_url as apiUrl, 
+      last_sync as lastSync, 
+      is_configured as isConfigured 
+     FROM providers`
   );
+  return rows;
+}
+
+async findProviderBySlug(slug: string): Promise<any | null> {
+  const rows = await databaseClient.query<any>(
+    `SELECT * FROM providers WHERE slug = ? LIMIT 1`,
+    [slug]
+  );
+  return rows.length ? rows[0] : null;
 }
 
   /**

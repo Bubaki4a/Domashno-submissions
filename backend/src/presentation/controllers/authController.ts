@@ -1,9 +1,12 @@
 import { Router, Response } from 'express';
+import jwt from 'jsonwebtoken';
 import { LoginUseCase } from '../../application/usecases/Auth/LoginUseCase';
 import { GetMeUseCase } from '../../application/usecases/Auth/GetMeUseCase';
 import { UpdateProfileUseCase } from '../../application/usecases/Auth/UpdateProfileUseCase';
 import { DatabaseUserRepository } from '../../infrastructure/users/database/DatabaseUserRepository';
 import { authMiddleware, type AuthRequest } from '../../infrastructure/web/authMiddleware';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
 
 const router = Router();
 const userRepository = new DatabaseUserRepository();
@@ -64,6 +67,37 @@ router.put('/auth/profile', authMiddleware, async (req: AuthRequest, res: Respon
       return res.status(400).json({ success: false, error: error.message });
     }
     res.status(500).json({ success: false, error: 'Internal server error' });
+  }
+});
+
+/**
+ * НОВ МАРШРУТ: Регенериране на токен
+ */
+router.post('/auth/refresh-token', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ success: false, error: 'Authentication required' });
+    }
+
+    // Генерираме нов токен със същата информация
+    const newToken = jwt.sign(
+      { 
+        sub: req.user.id, 
+        email: req.user.email, 
+        role: req.user.role 
+      },
+      JWT_SECRET,
+      // Добавяме "as any", за да избегнем TypeScript "No overload matches this call" грешката
+      { expiresIn: process.env.JWT_EXPIRES_IN || '7d' } as any
+    );
+
+    res.status(200).json({
+      success: true,
+      data: { token: newToken }
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).json({ success: false, error: 'Failed to regenerate token' });
   }
 });
 

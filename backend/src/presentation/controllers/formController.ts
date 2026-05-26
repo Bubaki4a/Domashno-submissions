@@ -8,6 +8,7 @@ import { GetAllSubmissionsUseCase } from '../../application/usecases/Submission/
 import { UpdateSubmissionUseCase } from '../../application/usecases/Submission/UpdateSubmissionUseCase';
 import { GetSubmissionByIdUseCase } from '../../application/usecases/Submission/GetSubmissionByIdUseCase';
 import { createSubmissionRepository } from '../../infrastructure/repositories/repositoryFactory';
+import { requireRole } from '../../infrastructure/web/authMiddleware';
 
 const router = Router();
 
@@ -50,7 +51,7 @@ router.post('/submit', async (req: Request, res: Response) => {
   }
 });
 
-router.get('/submissions', async (req: Request, res: Response) => {
+router.get('/submissions', requireRole(['administrator', 'manager']), async (req, res) => {
   try {
     const response: GetSubmissionsResponse = await getAllSubmissionsUseCase.execute();
 
