@@ -2,45 +2,45 @@ import type { IChatCompletionClient } from '../../../domain/ai/IChatCompletionCl
 import type { IProductRepository } from '../../../infrastructure/providers/interfaces/IProductRepository';
 import type { NormalizedProduct } from '../../../domain/entities/NormalizedProduct/NormalizedProduct';
 
-const ENHANCE_PROMPT = `Reply with ONLY a single line: 5 short event names where this product works as a merchant/corporate gift, separated by commas. Nothing else: no title, no intro, no numbers, no bullets, no markdown, no explanations.
-Example exact format: Trade show giveaway, Client appreciation day, New product launch, Year-end thank you, Employee award`;
+export type ProductInsightType = 'events' | 'audience' | 'emotion';
 
-/** Matches one numbered item: "1. " or "2) " etc. */
+const PROMPTS: Record<ProductInsightType, string> = {
+  events: `Reply with ONLY a single line: 5 short event names where this product works as a merchant/corporate gift, separated by commas. Nothing else: no title, no intro, no numbers, no bullets, no markdown, no explanations.
+Example exact format: Trade show giveaway, Client appreciation day, New product launch, Year-end thank you, Employee award`,
+  audience: `Reply with ONLY a single line: 5 short audience descriptions who are the best buyers or recipients for this product, separated by commas. Nothing else: no title, no intro, no numbers, no bullets, no markdown, no explanations.
+Example exact format: corporate gift buyers, event planners, employee recognition teams, loyal customers, high-value clients`,
+  emotion: `Reply with ONLY a single line: 5 short emotions or feelings this product evokes or is ideal for, separated by commas. Nothing else: no title, no intro, no numbers, no bullets, no markdown, no explanations.
+Example exact format: gratitude, excitement, appreciation, celebration, trust`,
+};
+
 const NUMBERED_ITEM = /\d+[.)]\s*/g;
-/** Any dash-like char (en/em dash, hyphen) with optional surrounding spaces – for splitting off explanations. */
 const DASH_BEFORE_EXPLANATION = /\s+[‐‑‒–—―\-]\s+/;
+const SKIP_TITLE = /^(#|\*\*?)?\s*\d*\s*(events\s+where|works\s+as|merchant\s+gift|audience\s+for|best\s+buyers|emotions?\s+or|feelings?\s+this)/i;
 
-/**
- * Normalizes AI response: strip title, numbering, markdown, explanations; extract event names; output comma-separated only.
- */
-function normalizeEventsResponse(raw: string): string {
-  const events: string[] = [];
+function normalizeAiResponse(raw: string): string {
+  const items: string[] = [];
 
-  // Split by numbered list (works for multi-line or single-line "1. ... 2. ..." text)
   const segments = raw
     .split(NUMBERED_ITEM)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  const skipTitle = /^(#|\*\*?)?\s*\d*\s*(events\s+where|works\s+as|merchant\s+gift)/i;
-
   for (const segment of segments) {
-    if (skipTitle.test(segment)) continue;
+    if (SKIP_TITLE.test(segment)) continue;
 
     let text = segment.replace(/\*\*/g, '').trim();
-    // Keep only the event name: part before " – explanation" or " - explanation"
     const beforeDash = text.split(DASH_BEFORE_EXPLANATION)[0];
     if (beforeDash) text = beforeDash.trim();
 
-    if (text.length > 2 && text.length < 120) events.push(text);
+    if (text.length > 1 && text.length < 120) {
+      items.push(text);
+    }
   }
 
-  return events.slice(0, 5).join(', ').trim() || raw.replace(/\*\*/g, '').trim();
+  const normalized = items.slice(0, 5).join(', ').trim();
+  return normalized || raw.replace(/\*\*/g, '').trim();
 }
 
-/**
- * Builds a short product summary for the AI from normalized product data.
- */
 function productSummary(product: NormalizedProduct): string {
   const name = product.normalizedName ?? product.name ?? 'Unknown product';
   const category = product.normalizedCategory ?? product.category ?? '';
@@ -58,17 +58,16 @@ export interface EnhanceProductInput {
 
 export interface EnhanceProductResult {
   product: NormalizedProduct;
-  events: string;
+  events?: string;
+  audience?: string;
+  emotion?: string;
 }
 
-/**
- * Loads a normalized product, asks the configured AI for 5 events (merchant gift use cases),
- * and returns the generated events. Does not save to DB; user saves via the product edit form.
- */
 export class EnhanceProductUseCase {
   constructor(
     private readonly productRepository: IProductRepository,
     private readonly chatClient: IChatCompletionClient,
+    private readonly insightType: ProductInsightType = 'events',
   ) { }
 
   async execute(input: EnhanceProductInput): Promise<EnhanceProductResult> {
@@ -76,22 +75,26 @@ export class EnhanceProductUseCase {
 
     const product = await this.productRepository.findNormalized(providerId, productId);
     if (!product) {
-      throw new Error('Product not found 1');
+      throw new Error('Product not found');
     }
 
     const summary = productSummary(product);
-    const userContent = `${summary}\n\n${ENHANCE_PROMPT}`;
+    const userContent = `${summary}\n\n${PROMPTS[this.insightType]}`;
 
     const rawResponse = await this.chatClient.chat([
       { role: 'system', content: 'You reply only with the requested format. No titles, no numbering, no markdown, no extra text.' },
       { role: 'user', content: userContent },
     ]);
-    const events = normalizeEventsResponse(rawResponse);
+    const insight = normalizeAiResponse(rawResponse);
 
-    // Return enhanced data without saving; frontend shows it and user saves via Save button
+    const enrichedProduct = {
+      ...product,
+      [this.insightType]: insight,
+    } as NormalizedProduct;
+
     return {
-      product: { ...product, events },
-      events,
-    };
+      product: enrichedProduct,
+      [this.insightType]: insight,
+    } as EnhanceProductResult;
   }
 }

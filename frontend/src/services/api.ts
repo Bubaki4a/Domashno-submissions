@@ -171,6 +171,30 @@ class ApiService {
   }
 
   /** Call AI to generate "5 events for merchant gift". Returns enhanced data only; does not save. */
+  async generateProductEvents(providerId: string, id: string): Promise<Product> {
+    const product = await this.request<Product>(
+      `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}/events`,
+      { method: 'POST' }
+    ) as unknown as Product;
+    return { ...product, providerId };
+  }
+
+  async generateProductAudience(providerId: string, id: string): Promise<Product> {
+    const product = await this.request<Product>(
+      `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}/audience`,
+      { method: 'POST' }
+    ) as unknown as Product;
+    return { ...product, providerId };
+  }
+
+  async generateProductEmotion(providerId: string, id: string): Promise<Product> {
+    const product = await this.request<Product>(
+      `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}/emotion`,
+      { method: 'POST' }
+    ) as unknown as Product;
+    return { ...product, providerId };
+  }
+
   async enhanceProduct(providerId: string, id: string): Promise<Product> {
     const product = await this.request<Product>(
       `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}/enhance`,

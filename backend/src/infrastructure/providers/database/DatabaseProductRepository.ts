@@ -99,16 +99,16 @@ export class DatabaseProductRepository implements IProductRepository {
     await pool.execute(
       `INSERT INTO ${this.normalizedTable} (
         provider_id, product_id, name, price, description, image_url, category, sku, stock, provider, 
-        normalized_name, normalized_description, normalized_category, metadata, events,
+        normalized_name, normalized_description, normalized_category, metadata, events, audience, emotions,
         seo_title, seo_description, quality_score, last_normalized
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
         name = VALUES(name), price = VALUES(price), description = VALUES(description),
         image_url = VALUES(image_url), category = VALUES(category), sku = VALUES(sku),
         stock = VALUES(stock), provider = VALUES(provider), normalized_name = VALUES(normalized_name),
         normalized_description = VALUES(normalized_description), normalized_category = VALUES(normalized_category),
-        metadata = VALUES(metadata), events = VALUES(events),
+        metadata = VALUES(metadata), events = VALUES(events), audience = VALUES(audience), emotions = VALUES(emotions),
         seo_title = VALUES(seo_title), seo_description = VALUES(seo_description),
         quality_score = VALUES(quality_score), last_normalized = VALUES(last_normalized)`,
       [
@@ -116,7 +116,7 @@ export class DatabaseProductRepository implements IProductRepository {
         normalizedData.imageUrl ?? null, normalizedData.category ?? null, normalizedData.sku ?? null,
         normalizedData.stock ?? null, normalizedData.provider ?? null, normalizedData.normalizedName ?? null,
         normalizedData.normalizedDescription ?? null, normalizedData.normalizedCategory ?? null,
-        meta ? JSON.stringify(meta) : null, normalizedData.events ?? null,
+        meta ? JSON.stringify(meta) : null, normalizedData.events ?? null, normalizedData.audience ?? null, normalizedData.emotion ?? null,
         // Новите колони
         meta.seoTitle ?? null, meta.seoDescription ?? null, meta.qualityScore ?? 0,
         meta.lastNormalized ? new Date(meta.lastNormalized) : new Date()
@@ -135,7 +135,7 @@ export class DatabaseProductRepository implements IProductRepository {
     const rows = await databaseClient.query<any>(
       `SELECT product_id AS productId, name, price, description, image_url AS imageUrl, category, sku, stock, provider, 
               normalized_name AS normalizedName, normalized_description AS normalizedDescription, 
-              normalized_category AS normalizedCategory, metadata, events,
+              normalized_category AS normalizedCategory, metadata, events, audience, emotions AS emotion,
               seo_title, seo_description, quality_score, last_normalized
       FROM ${this.normalizedTable} WHERE provider_id = ? AND product_id = ? LIMIT 1`,
       [providerId, id],
@@ -155,6 +155,8 @@ export class DatabaseProductRepository implements IProductRepository {
         qualityScore: row.quality_score, lastNormalized: row.last_normalized ? toISOString(row.last_normalized) : undefined
       },
       events: row.events ?? undefined,
+      audience: row.audience ?? undefined,
+      emotion: row.emotion ?? undefined,
     };
   }
 
@@ -166,7 +168,7 @@ export class DatabaseProductRepository implements IProductRepository {
     const rows = await databaseClient.query<any>(
       `SELECT product_id AS productId, provider_id AS providerId, name, price, description, image_url AS imageUrl, category, sku, stock, provider, 
               normalized_name AS normalizedName, normalized_description AS normalizedDescription, 
-              normalized_category AS normalizedCategory, metadata, events,
+              normalized_category AS normalizedCategory, metadata, events, audience, emotions AS emotion,
               seo_title, seo_description, quality_score, last_normalized
       FROM ${this.normalizedTable} ${whereClause} ORDER BY COALESCE(normalized_name, name) ASC`,
       params,
@@ -185,6 +187,8 @@ export class DatabaseProductRepository implements IProductRepository {
         qualityScore: row.quality_score, lastNormalized: row.last_normalized ? toISOString(row.last_normalized) : undefined
       },
       events: row.events ?? undefined,
+      audience: row.audience ?? undefined,
+      emotion: row.emotion ?? undefined,
     }));
   }
 

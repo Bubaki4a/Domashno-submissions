@@ -10,7 +10,9 @@ const productRepository = createProductRepository();
 const chatClient = createChatCompletionClient();
 
 // Инициализиране на Use Cases
-const enhanceProductUseCase = new EnhanceProductUseCase(productRepository, chatClient);
+const eventsUseCase = new EnhanceProductUseCase(productRepository, chatClient, 'events');
+const audienceUseCase = new EnhanceProductUseCase(productRepository, chatClient, 'audience');
+const emotionUseCase = new EnhanceProductUseCase(productRepository, chatClient, 'emotion');
 const deleteNormalizedProductUseCase = new DeleteNormalizedProductUseCase(productRepository);
 
 // Помощни функции за филтриране и показване
@@ -66,6 +68,8 @@ router.get('/products', async (req: Request, res: Response) => {
       normalizedDescription: p.normalizedDescription,
       normalizedCategory: p.normalizedCategory,
       events: p.events,
+      audience: p.audience,
+      emotion: p.emotion,
     }));
     res.json({ products });
   } catch (error) {
@@ -134,6 +138,8 @@ router.put(
         normalizedCategory: body.normalizedCategory !== undefined ? body.normalizedCategory : existing.normalizedCategory,
         metadata: body.metadata !== undefined ? body.metadata : existing.metadata,
         events: body.events !== undefined ? body.events : existing.events,
+        audience: body.audience !== undefined ? body.audience : existing.audience,
+        emotion: body.emotion !== undefined ? body.emotion : existing.emotion,
       };
 
       await productRepository.saveNormalized(providerId, id, merged);
@@ -181,12 +187,12 @@ router.delete(
 });
 
 /**
- * POST /api/products/:providerId/:id/enhance
- * AI подобрение. Само за Administrator и Manager.
+ * POST /api/products/:providerId/:id/events
+ * AI-generated event suggestions for the selected product.
  */
 router.post(
-  '/products/:providerId/:id/enhance', 
-  requireRole(['administrator', 'manager']), 
+  '/products/:providerId/:id/events',
+  requireRole(['administrator', 'manager']),
   async (req: Request, res: Response) => {
     try {
       const providerId = (req.params.providerId ?? '').trim();
@@ -195,12 +201,8 @@ router.post(
         return res.status(400).json({ error: 'providerId and id are required' });
       }
 
-      const result = await enhanceProductUseCase.execute({ providerId, productId: id });
-      res.json({
-        ...result.product,
-        providerId,
-        events: result.events,
-      });
+      const result = await eventsUseCase.execute({ providerId, productId: id });
+      res.json({ ...result.product, providerId, events: result.events });
     } catch (error) {
       if (error instanceof Error) {
         if (error.message.includes('Product not found')) {
@@ -210,9 +212,111 @@ router.post(
           return res.status(503).json({ error: error.message });
         }
       }
-      console.error('Error enhancing product:', error);
+      console.error('Error generating events:', error);
       res.status(500).json({
-        error: 'Failed to enhance product',
+        error: 'Failed to generate events',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+});
+
+/**
+ * POST /api/products/:providerId/:id/audience
+ * AI-generated audience suggestions for the selected product.
+ */
+router.post(
+  '/products/:providerId/:id/audience',
+  requireRole(['administrator', 'manager']),
+  async (req: Request, res: Response) => {
+    try {
+      const providerId = (req.params.providerId ?? '').trim();
+      const id = (req.params.id ?? '').trim();
+      if (!providerId || !id) {
+        return res.status(400).json({ error: 'providerId and id are required' });
+      }
+
+      const result = await audienceUseCase.execute({ providerId, productId: id });
+      res.json({ ...result.product, providerId, audience: result.audience });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Product not found')) {
+          return res.status(404).json({ error: error.message });
+        }
+        if (error.message.includes('DEEP_INFRA_KEY')) {
+          return res.status(503).json({ error: error.message });
+        }
+      }
+      console.error('Error generating audience:', error);
+      res.status(500).json({
+        error: 'Failed to generate audience',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+});
+
+/**
+ * POST /api/products/:providerId/:id/emotion
+ * AI-generated emotion suggestions for the selected product.
+ */
+router.post(
+  '/products/:providerId/:id/emotion',
+  requireRole(['administrator', 'manager']),
+  async (req: Request, res: Response) => {
+    try {
+      const providerId = (req.params.providerId ?? '').trim();
+      const id = (req.params.id ?? '').trim();
+      if (!providerId || !id) {
+        return res.status(400).json({ error: 'providerId and id are required' });
+      }
+
+      const result = await emotionUseCase.execute({ providerId, productId: id });
+      res.json({ ...result.product, providerId, emotion: result.emotion });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Product not found')) {
+          return res.status(404).json({ error: error.message });
+        }
+        if (error.message.includes('DEEP_INFRA_KEY')) {
+          return res.status(503).json({ error: error.message });
+        }
+      }
+      console.error('Error generating emotion:', error);
+      res.status(500).json({
+        error: 'Failed to generate emotion',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      });
+    }
+});
+
+/**
+ * POST /api/products/:providerId/:id/enhance
+ * Alias for legacy clients: same as /events.
+ */
+router.post(
+  '/products/:providerId/:id/enhance',
+  requireRole(['administrator', 'manager']),
+  async (req: Request, res: Response) => {
+    try {
+      const providerId = (req.params.providerId ?? '').trim();
+      const id = (req.params.id ?? '').trim();
+      if (!providerId || !id) {
+        return res.status(400).json({ error: 'providerId and id are required' });
+      }
+
+      const result = await eventsUseCase.execute({ providerId, productId: id });
+      res.json({ ...result.product, providerId, events: result.events });
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('Product not found')) {
+          return res.status(404).json({ error: error.message });
+        }
+        if (error.message.includes('DEEP_INFRA_KEY')) {
+          return res.status(503).json({ error: error.message });
+        }
+      }
+      console.error('Error generating events:', error);
+      res.status(500).json({
+        error: 'Failed to generate events',
         message: error instanceof Error ? error.message : 'Unknown error',
       });
     }

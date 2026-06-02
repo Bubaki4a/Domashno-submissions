@@ -16,6 +16,7 @@ const mockProductRepo: IProductRepository = {
   saveNormalized: vi.fn(),
   findAllNormalized: vi.fn(),
   findAllWithNormalized: vi.fn(),
+  deleteNormalized: vi.fn(),
   findByAiStatus: vi.fn(),
   updateAiStatus: vi.fn(),
   setAiStatusByProvider: vi.fn(),
@@ -43,7 +44,7 @@ describe('EnhanceProductUseCase', () => {
   it('throws \"Product not found\" when findNormalized returns null', async () => {
     mockFindNormalized.mockResolvedValue(null);
 
-    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient);
+    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient, 'events');
 
     await expect(
       useCase.execute({ providerId: 'prov1', productId: 'p1' }),
@@ -56,7 +57,7 @@ describe('EnhanceProductUseCase', () => {
     mockFindNormalized.mockResolvedValue(baseProduct);
     mockChat.mockResolvedValue('Trade show giveaway, Client appreciation, Launch event, Thank you, Employee award');
 
-    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient);
+    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient, 'events');
     const result = await useCase.execute({ providerId: 'prov1', productId: 'p1' });
 
     expect(result.product).toMatchObject({ ...baseProduct, events: expect.any(String) });
@@ -75,7 +76,7 @@ describe('EnhanceProductUseCase', () => {
     mockFindNormalized.mockResolvedValue(baseProduct);
     mockChat.mockResolvedValue('1. Trade show  2. Client gift  3. Launch  4. Thank you  5. Award');
 
-    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient);
+    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient, 'events');
     const result = await useCase.execute({ providerId: 'prov1', productId: 'p1' });
 
     expect(result.events).toContain('Trade show');
@@ -87,10 +88,11 @@ describe('EnhanceProductUseCase', () => {
     mockFindNormalized.mockResolvedValue(baseProduct);
     mockChat.mockResolvedValue('Events where this works: 1. Trade show, 2. Client gift, 3. Launch');
 
-    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient);
+    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient, 'events');
     const result = await useCase.execute({ providerId: 'prov1', productId: 'p1' });
 
-    expect(result.events.length).toBeGreaterThan(0);
+    expect(result.events).toBeDefined();
+    expect(result.events?.length).toBeGreaterThan(0);
     expect(result.events).not.toContain('Events where this works');
   });
 
@@ -98,7 +100,7 @@ describe('EnhanceProductUseCase', () => {
     mockFindNormalized.mockResolvedValue(baseProduct);
     mockChat.mockResolvedValue('A, B, C, D, E');
 
-    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient);
+    const useCase = new EnhanceProductUseCase(mockProductRepo, mockChatClient, 'events');
     await useCase.execute({ providerId: 'prov1', productId: 'p1' });
 
     const userMessage = mockChat.mock.calls[0][0].find((m: { role: string }) => m.role === 'user');

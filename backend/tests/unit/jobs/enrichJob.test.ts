@@ -14,6 +14,7 @@ const mockProductRepo: IProductRepository = {
   findNormalized: mockFindNormalized,
   save: vi.fn(),
   findById: vi.fn(),
+  deleteNormalized: vi.fn(),
   findAll: vi.fn(),
   delete: vi.fn(),
   findAllNormalized: vi.fn(),

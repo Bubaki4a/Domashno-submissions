@@ -27,4 +27,8 @@ export interface NormalizedProduct {
   metadata?: NormalizedProductMetadata;
   /** AI-generated: events where this product can be used as merchant gift */
   events?: string;
+  /** AI-generated: audiences most likely to buy or receive this product */
+  audience?: string;
+  /** AI-generated: emotions or feelings this product evokes */
+  emotion?: string;
 }

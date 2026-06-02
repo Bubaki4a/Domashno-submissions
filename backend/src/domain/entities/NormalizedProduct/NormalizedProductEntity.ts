@@ -18,6 +18,8 @@ export class NormalizedProductEntity {
     public readonly normalizedCategory: string | undefined,
     public readonly metadata: NormalizedProductMetadata | undefined,
     public readonly events: string | undefined,
+    public readonly audience: string | undefined,
+    public readonly emotion: string | undefined,
   ) { }
 
   static create(data: NormalizedProductCreateData): NormalizedProductEntity {
@@ -66,6 +68,8 @@ export class NormalizedProductEntity {
       data.normalizedCategory?.trim(),
       data.metadata,
       data.events?.trim(),
+      data.audience?.trim(),
+      data.emotion?.trim(),
     );
   }
 
@@ -89,6 +93,8 @@ export class NormalizedProductEntity {
       data.normalizedCategory,
       data.metadata,
       data.events,
+      data.audience,
+      data.emotion,
     );
   }
 
@@ -108,6 +114,8 @@ export class NormalizedProductEntity {
       normalizedCategory: this.normalizedCategory,
       metadata: this.metadata,
       events: this.events,
+      audience: this.audience,
+      emotion: this.emotion,
     };
   }
 
@@ -148,6 +156,8 @@ export class NormalizedProductEntity {
       data.normalizedCategory ?? this.normalizedCategory,
       updatedMetadata,
       data.events ?? this.events,
+      data.audience ?? this.audience,
+      data.emotion ?? this.emotion,
     );
   }
 }

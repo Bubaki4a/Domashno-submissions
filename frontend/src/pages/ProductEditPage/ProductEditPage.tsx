@@ -25,10 +25,14 @@ export const ProductEditPage: React.FC = () => {
     normalizedDescription: '',
     normalizedCategory: '',
     events: '',
+    audience: '',
+    emotion: '',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isGeneratingEvents, setIsGeneratingEvents] = useState(false);
+  const [isGeneratingAudience, setIsGeneratingAudience] = useState(false);
+  const [isGeneratingEmotion, setIsGeneratingEmotion] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
@@ -63,6 +67,8 @@ export const ProductEditPage: React.FC = () => {
           normalizedDescription: p.normalizedDescription ?? '',
           normalizedCategory: p.normalizedCategory ?? '',
           events: p.events ?? '',
+          audience: p.audience ?? '',
+          emotion: p.emotion ?? '',
         });
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Error loading'))
@@ -79,22 +85,60 @@ export const ProductEditPage: React.FC = () => {
     window.location.hash = '#products';
   };
 
-  const handleEnhance = async () => {
+  const handleGenerateEvents = async () => {
     if (!params?.providerId || !params?.id) return;
-    setIsEnhancing(true);
+    setIsGeneratingEvents(true);
     setSaveMessage(null);
     try {
-      const enhanced = await apiService.enhanceProduct(params.providerId, params.id);
+      const enhanced = await apiService.generateProductEvents(params.providerId, params.id);
       setProduct(enhanced);
       setForm((prev) => ({ ...prev, events: enhanced.events ?? '' }));
       setSaveMessage({ type: 'success', text: 'Events generated. Review and click Save to store them.' });
     } catch (err) {
       setSaveMessage({
         type: 'error',
-        text: err instanceof Error ? err.message : 'Enhance failed',
+        text: err instanceof Error ? err.message : 'Failed to generate events',
       });
     } finally {
-      setIsEnhancing(false);
+      setIsGeneratingEvents(false);
+    }
+  };
+
+  const handleGenerateAudience = async () => {
+    if (!params?.providerId || !params?.id) return;
+    setIsGeneratingAudience(true);
+    setSaveMessage(null);
+    try {
+      const enhanced = await apiService.generateProductAudience(params.providerId, params.id);
+      setProduct(enhanced);
+      setForm((prev) => ({ ...prev, audience: enhanced.audience ?? '' }));
+      setSaveMessage({ type: 'success', text: 'Audience generated. Review and click Save to store it.' });
+    } catch (err) {
+      setSaveMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to generate audience',
+      });
+    } finally {
+      setIsGeneratingAudience(false);
+    }
+  };
+
+  const handleGenerateEmotion = async () => {
+    if (!params?.providerId || !params?.id) return;
+    setIsGeneratingEmotion(true);
+    setSaveMessage(null);
+    try {
+      const enhanced = await apiService.generateProductEmotion(params.providerId, params.id);
+      setProduct(enhanced);
+      setForm((prev) => ({ ...prev, emotion: enhanced.emotion ?? '' }));
+      setSaveMessage({ type: 'success', text: 'Emotion generated. Review and click Save to store it.' });
+    } catch (err) {
+      setSaveMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : 'Failed to generate emotion',
+      });
+    } finally {
+      setIsGeneratingEmotion(false);
     }
   };
 
@@ -116,6 +160,8 @@ export const ProductEditPage: React.FC = () => {
         normalizedDescription: form.normalizedDescription.trim() || undefined,
         normalizedCategory: form.normalizedCategory.trim() || undefined,
         events: form.events.trim() || undefined,
+        audience: form.audience.trim() || undefined,
+        emotion: form.emotion.trim() || undefined,
       });
       setSaveMessage({ type: 'success', text: 'Product saved successfully.' });
       setProduct(updated);
@@ -289,16 +335,58 @@ export const ProductEditPage: React.FC = () => {
             value={form.events}
             onChange={handleChange}
             rows={5}
-            placeholder="Use “Enhance product” to generate 5 events with AI."
+            placeholder="Use “Generate events” to get 5 event ideas with AI."
             className="product-edit-input product-edit-textarea"
           />
           <button
             type="button"
-            onClick={handleEnhance}
-            disabled={isEnhancing}
+            onClick={handleGenerateEvents}
+            disabled={isGeneratingEvents}
             className="product-edit-enhance-btn"
           >
-            {isEnhancing ? 'Enhancing…' : 'Enhance product'}
+            {isGeneratingEvents ? 'Generating…' : 'Generate events'}
+          </button>
+        </div>
+
+        <div className="product-edit-field product-edit-enhance-row">
+          <label>Audience</label>
+          <textarea
+            id="audience"
+            name="audience"
+            value={form.audience}
+            onChange={handleChange}
+            rows={3}
+            placeholder="Use “Generate audience” to get 5 audience segments with AI."
+            className="product-edit-input product-edit-textarea"
+          />
+          <button
+            type="button"
+            onClick={handleGenerateAudience}
+            disabled={isGeneratingAudience}
+            className="product-edit-enhance-btn"
+          >
+            {isGeneratingAudience ? 'Generating…' : 'Generate audience'}
+          </button>
+        </div>
+
+        <div className="product-edit-field product-edit-enhance-row">
+          <label>Emotion</label>
+          <textarea
+            id="emotion"
+            name="emotion"
+            value={form.emotion}
+            onChange={handleChange}
+            rows={3}
+            placeholder="Use “Generate emotion” to get 5 emotions with AI."
+            className="product-edit-input product-edit-textarea"
+          />
+          <button
+            type="button"
+            onClick={handleGenerateEmotion}
+            disabled={isGeneratingEmotion}
+            className="product-edit-enhance-btn"
+          >
+            {isGeneratingEmotion ? 'Generating…' : 'Generate emotion'}
           </button>
         </div>
 
