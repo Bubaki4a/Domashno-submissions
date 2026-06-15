@@ -54,6 +54,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const currentHash = window.location.hash;
     if (hash === '#') return currentHash === '' || currentHash === '#' || currentHash.startsWith('#edit/');
     if (hash === '#products') return currentHash === '#products' || currentHash.startsWith('#products/edit/');
+    if (hash === '#products-issues') return currentHash === '#products-issues';
     return currentHash === hash;
   };
 
@@ -126,6 +127,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {nav('#submissions', 'Submissions', 'submissions')}
           {nav('#providers', 'Providers', 'providers')}
           {nav('#products', 'Products', 'products')}
+          {nav('#products-issues', 'Products with issues', 'products')}
           {nav('#users', 'Users', 'users')}
           {nav('#jobs', 'Pipeline Jobs', 'jobs')}
         </nav>

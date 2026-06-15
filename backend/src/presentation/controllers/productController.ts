@@ -82,6 +82,49 @@ router.get('/products', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/products/issues
+ * Списък с продукти с quality issues. Достъпен за всички оторизирани потребители.
+ */
+router.get('/products/issues', async (req: Request, res: Response) => {
+  try {
+    const providerId = (req.query.providerId as string) || undefined;
+    const limit = req.query.limit != null ? parseInt(String(req.query.limit), 10) : undefined;
+    const rows = await productRepository.findProductsWithQualityIssues(providerId, limit);
+
+    const products = rows.map((p) => ({
+      id: p.id,
+      providerId: p.providerId,
+      name: p.normalizedName ?? p.name ?? '—',
+      category: p.normalizedCategory ?? p.category,
+      sku: p.sku,
+      price: p.price,
+      description: p.normalizedDescription ?? p.description,
+      imageUrl: p.imageUrl,
+      stock: p.stock,
+      provider: p.provider,
+      aiStatus: p.aiStatus,
+      aiError: p.aiError,
+      normalizedName: p.normalizedName,
+      normalizedDescription: p.normalizedDescription,
+      normalizedCategory: p.normalizedCategory,
+      events: p.events,
+      audience: p.audience,
+      emotion: p.emotion,
+      qualityStatus: p.qualityStatus,
+      qualityIssues: p.qualityIssues,
+    }));
+
+    res.json({ products });
+  } catch (error) {
+    console.error('Error listing products with issues:', error);
+    res.status(500).json({
+      error: 'Failed to list products with issues',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
  * GET /api/products/:providerId/:id
  * Детайли за един продукт. Достъпен за всички оторизирани потребители.
  */

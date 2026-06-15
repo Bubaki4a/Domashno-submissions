@@ -150,6 +150,16 @@ class ApiService {
     return response.products ?? [];
   }
 
+  async getProductsWithIssues(params?: { providerId?: string; limit?: number }): Promise<ProductIssueRow[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.providerId?.trim()) searchParams.set('providerId', params.providerId.trim());
+    if (params?.limit != null) searchParams.set('limit', String(params.limit));
+    const query = searchParams.toString();
+    const url = query ? `/products/issues?${query}` : '/products/issues';
+    const response = (await this.request<{ products: ProductIssueRow[] }>(url, { method: 'GET' })) as unknown as { products: ProductIssueRow[] };
+    return response.products ?? [];
+  }
+
   async getProduct(providerId: string, id: string): Promise<Product> {
     const product = await this.request<Product>(
       `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}`,
@@ -161,7 +171,7 @@ class ApiService {
   async updateProduct(
     providerId: string,
     id: string,
-    data: Partial<Pick<Product, 'name' | 'price' | 'description' | 'imageUrl' | 'category' | 'sku' | 'stock' | 'normalizedName' | 'normalizedDescription' | 'normalizedCategory' | 'events'>>
+    data: Partial<Pick<Product, 'name' | 'price' | 'description' | 'imageUrl' | 'category' | 'sku' | 'stock' | 'normalizedName' | 'normalizedDescription' | 'normalizedCategory' | 'events' | 'audience' | 'emotion'>>
   ): Promise<Product> {
     const product = await this.request<Product>(
       `/products/${encodeURIComponent(providerId)}/${encodeURIComponent(id)}`,
@@ -264,6 +274,13 @@ class ApiService {
     }) as Promise<JobTriggerResponse>;
   }
 
+  async triggerDataQualityJob(options?: { providerId?: string; batchSize?: number }): Promise<JobTriggerResponse> {
+    return this.request<JobTriggerResponse>('/admin/jobs/data-quality', {
+      method: 'POST',
+      body: JSON.stringify(options ?? {}),
+    }) as Promise<JobTriggerResponse>;
+  }
+
   async getFailedProducts(providerId?: string): Promise<FailedProductRow[]> {
     const url = providerId ? `/admin/jobs/failed-products?provider_id=${encodeURIComponent(providerId)}` : '/admin/jobs/failed-products';
     const response = (await this.request<FailedProductRow[]>(url, { method: 'GET' })) as unknown as { data: FailedProductRow[] };
@@ -313,6 +330,29 @@ export interface JobTriggerResponse {
   successCount: number;
   failedCount: number;
   error?: string;
+}
+
+export interface ProductIssueRow {
+  id: string;
+  providerId: string;
+  name: string;
+  category?: string;
+  sku?: string;
+  price?: number;
+  description?: string;
+  imageUrl?: string;
+  stock?: number;
+  provider?: string;
+  aiStatus?: string | null;
+  aiError?: string | null;
+  normalizedName?: string;
+  normalizedDescription?: string;
+  normalizedCategory?: string;
+  events?: string;
+  audience?: string;
+  emotion?: string;
+  qualityStatus: 'ok' | 'issues' | 'error' | null;
+  qualityIssues: unknown;
 }
 
 export interface FailedProductRow {

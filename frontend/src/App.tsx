@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage/HomePage';
 import { SubmissionsPage } from './pages/SubmissionsPage/SubmissionsPage';
 import { ProvidersPage } from './pages/ProvidersPage/ProvidersPage';
 import { ProductsPage } from './pages/ProductsPage/ProductsPage';
+import { ProductsIssuesPage } from './pages/ProductsIssuesPage/ProductsIssuesPage';
 import { ProductEditPage } from './pages/ProductEditPage/ProductEditPage';
 import { UsersPage } from './pages/UsersPage/UsersPage';
 import { JobsPage } from './pages/JobsPage/JobsPage';
@@ -14,7 +15,7 @@ import './App.css';
 
 function AppContent() {
   const { user, loading } = useAuth();
-  const [currentPage, setCurrentPage] = useState<'home' | 'submissions' | 'providers' | 'products' | 'product-edit' | 'users' | 'jobs' | 'profile'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'submissions' | 'providers' | 'products' | 'products-issues' | 'product-edit' | 'users' | 'jobs' | 'profile'>('home');
 
   useEffect(() => {
     const handleHashChange = () => {
@@ -38,6 +39,7 @@ function AppContent() {
       if (hash === '#submissions') setCurrentPage('submissions');
       else if (hash === '#providers') setCurrentPage('providers');
       else if (hash === '#products') setCurrentPage('products');
+      else if (hash === '#products-issues') setCurrentPage('products-issues');
       else if (hash.startsWith('#products/edit/')) setCurrentPage('product-edit');
       else if (hash === '#users') setCurrentPage('users');
       else if (hash === '#jobs') setCurrentPage('jobs');
@@ -68,6 +70,7 @@ function AppContent() {
       {currentPage === 'submissions' && <SubmissionsPage />}
       {currentPage === 'providers' && <ProvidersPage />}
       {currentPage === 'products' && <ProductsPage />}
+      {currentPage === 'products-issues' && <ProductsIssuesPage />}
       {currentPage === 'product-edit' && <ProductEditPage />}
       {currentPage === 'users' && <UsersPage />}
       {currentPage === 'jobs' && <JobsPage />}

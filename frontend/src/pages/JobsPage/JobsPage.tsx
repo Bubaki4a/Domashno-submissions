@@ -10,8 +10,9 @@ export const JobsPage: React.FC = () => {
   const [error, setError] = useState('');
   const [importLoading, setImportLoading] = useState(false);
   const [enrichLoading, setEnrichLoading] = useState(false);
+  const [qualityLoading, setQualityLoading] = useState(false);
   const [retryLoading, setRetryLoading] = useState(false);
-  const [lastTriggerMessage, setLastTriggerMessage] = useState<{ type: 'import' | 'enrich'; success: boolean; text: string } | null>(null);
+  const [lastTriggerMessage, setLastTriggerMessage] = useState<{ type: 'import' | 'enrich' | 'data-quality'; success: boolean; text: string } | null>(null);
 
   const loadRuns = async () => {
     setError('');
@@ -87,6 +88,27 @@ export const JobsPage: React.FC = () => {
     }
   };
 
+  const handleTriggerDataQuality = async () => {
+    setQualityLoading(true);
+    setLastTriggerMessage(null);
+    setError('');
+    try {
+      const res = await apiService.triggerDataQualityJob();
+      setLastTriggerMessage({
+        type: 'data-quality',
+        success: res.success,
+        text: res.success
+          ? `Run #${res.runId}: ${res.processedCount} checked, ${res.successCount} saved, ${res.failedCount} failed`
+          : (res.error ?? `Run #${res.runId} failed`),
+      });
+      await loadRuns();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Data quality job failed');
+    } finally {
+      setQualityLoading(false);
+    }
+  };
+
   const handleRetryFailed = async () => {
     setRetryLoading(true);
     setError('');
@@ -153,8 +175,16 @@ export const JobsPage: React.FC = () => {
           >
             {enrichLoading ? 'Running…' : 'Run enrich'}
           </button>
+          <button
+            type="button"
+            className="jobs-btn jobs-btn-quality"
+            onClick={handleTriggerDataQuality}
+            disabled={qualityLoading}
+          >
+            {qualityLoading ? 'Running…' : 'Run data quality'}
+          </button>
         </div>
-        <p className="jobs-hint">Import fetches supplier data and marks products for AI. Enrich processes pending products with AI.</p>
+        <p className="jobs-hint">Import fetches supplier data and marks products for AI. Enrich processes pending products with AI. Data quality validates imported and enriched products and stores issues on the product row.</p>
       </section>
 
       <section className="jobs-section">

@@ -3,7 +3,13 @@ import path from 'path';
 import { Product } from '../../../domain/entities/Product/Product';
 import { NormalizedProduct } from '../../../domain/entities/NormalizedProduct/NormalizedProduct';
 import { ProductEntity } from '../../../domain/entities/Product/ProductEntity';
-import type { AiStatus, ProductAiStatusRow } from '../interfaces/IProductRepository';
+import type {
+  AiStatus,
+  ProductAiStatusRow,
+  ProductQualityCheckRow,
+  ProductQualityIssueRow,
+  ProductQualityStatus,
+} from '../interfaces/IProductRepository';
 import { IProductRepository } from '../interfaces/IProductRepository';
 
 const getBaseProvidersDirectory = (): string => {
@@ -165,6 +171,21 @@ export class ProductFileRepository implements IProductRepository {
         return;
       }
       throw new Error(`Failed to delete product: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async deleteNormalized(providerId: string, id: string): Promise<void> {
+    await this.ensureProviderProductsDirectory(providerId);
+
+    const normalizedPath = this.getNormalizedPath(providerId, id);
+
+    try {
+      await fs.unlink(normalizedPath);
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+        return;
+      }
+      throw new Error(`Failed to delete normalized product: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -411,5 +432,22 @@ export class ProductFileRepository implements IProductRepository {
 
   async resetFailedAiStatus(_providerId?: string): Promise<number> {
     return 0;
+  }
+
+  async markProductQuality(
+    _providerId: string,
+    _productId: string,
+    _qualityStatus: ProductQualityStatus,
+    _qualityIssues: unknown,
+  ): Promise<void> {
+    // No-op for file storage.
+  }
+
+  async findProductsForQualityCheck(_providerId?: string, _limit?: number): Promise<ProductQualityCheckRow[]> {
+    return [];
+  }
+
+  async findProductsWithQualityIssues(_providerId?: string, _limit?: number): Promise<ProductQualityIssueRow[]> {
+    return [];
   }
 }

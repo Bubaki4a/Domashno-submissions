@@ -3,7 +3,13 @@ import { databaseClient } from '../../database/databaseClient';
 import { Product } from '../../../domain/entities/Product/Product';
 import { NormalizedProduct } from '../../../domain/entities/NormalizedProduct/NormalizedProduct';
 import { ProductEntity } from '../../../domain/entities/Product/ProductEntity';
-import type { AiStatus, ProductAiStatusRow } from '../interfaces/IProductRepository';
+import type {
+  AiStatus,
+  ProductAiStatusRow,
+  ProductQualityCheckRow,
+  ProductQualityIssueRow,
+  ProductQualityStatus,
+} from '../interfaces/IProductRepository';
 import { IProductRepository } from '../interfaces/IProductRepository';
 
 function toISOString(value: Date | string): string {
@@ -15,6 +21,36 @@ function parseJsonColumn<T = unknown>(value: unknown): T | undefined {
   if (typeof value === 'object') return value as T;
   if (typeof value === 'string') return JSON.parse(value) as T;
   return undefined;
+}
+
+function parseQualityIssues(value: unknown): unknown {
+  const parsed = parseJsonColumn(value);
+  return parsed ?? null;
+}
+
+function rowToQualityCheck(row: Record<string, unknown>): ProductQualityCheckRow {
+  return {
+    id: String(row.id),
+    providerId: String(row.providerId),
+    name: row.name != null ? String(row.name) : undefined,
+    price: row.price != null ? Number(row.price) : undefined,
+    description: row.description != null ? String(row.description) : undefined,
+    imageUrl: row.imageUrl != null ? String(row.imageUrl) : undefined,
+    category: row.category != null ? String(row.category) : undefined,
+    sku: row.sku != null ? String(row.sku) : undefined,
+    stock: row.stock != null ? Number(row.stock) : undefined,
+    provider: row.provider != null ? String(row.provider) : undefined,
+    aiStatus: row.aiStatus != null ? (row.aiStatus as ProductQualityCheckRow['aiStatus']) : undefined,
+    aiError: row.aiError != null ? String(row.aiError) : undefined,
+    normalizedName: row.normalizedName != null ? String(row.normalizedName) : undefined,
+    normalizedDescription: row.normalizedDescription != null ? String(row.normalizedDescription) : undefined,
+    normalizedCategory: row.normalizedCategory != null ? String(row.normalizedCategory) : undefined,
+    events: row.events != null ? String(row.events) : undefined,
+    audience: row.audience != null ? String(row.audience) : undefined,
+    emotion: row.emotion != null ? String(row.emotion) : undefined,
+    qualityStatus: row.qualityStatus != null ? (row.qualityStatus as ProductQualityStatus) : null,
+    qualityIssues: parseQualityIssues(row.qualityIssues),
+  };
 }
 
 export class DatabaseProductRepository implements IProductRepository {
@@ -204,6 +240,14 @@ export class DatabaseProductRepository implements IProductRepository {
   async updateAiStatus(providerId: string, productId: string, status: AiStatus, aiError?: string | null): Promise<void> {
     await databaseClient.query(`UPDATE ${this.productsTable} SET ai_status = ?, ai_updated_at = NOW(6), ai_error = ? WHERE provider_id = ? AND id = ?`, [status, aiError ?? null, providerId, productId]);
   }
+  async markProductQuality(providerId: string, productId: string, qualityStatus: ProductQualityStatus, qualityIssues: unknown): Promise<void> {
+    await databaseClient.query(
+      `UPDATE ${this.productsTable}
+       SET quality_status = ?, quality_issues = ?, updated_at = NOW(6)
+       WHERE provider_id = ? AND id = ?`,
+      [qualityStatus, qualityIssues != null ? JSON.stringify(qualityIssues) : null, providerId, productId],
+    );
+  }
   async setAiStatusByProvider(providerId: string, status: AiStatus): Promise<number> {
     const [result] = await databaseClient.getPool().execute<ResultSetHeader>(`UPDATE ${this.productsTable} SET ai_status = ?, ai_updated_at = NULL, ai_error = NULL WHERE provider_id = ?`, [status, providerId]);
     return result.affectedRows;
@@ -214,6 +258,97 @@ export class DatabaseProductRepository implements IProductRepository {
     const params = providerId ? [providerId] : [];
     const [result] = await pool.execute<ResultSetHeader>(query, params);
     return result.affectedRows;
+  }
+
+  async findProductsForQualityCheck(providerId?: string, limit: number = 100): Promise<ProductQualityCheckRow[]> {
+    const params: unknown[] = [];
+    let whereClause = '';
+    if (providerId) {
+      whereClause = 'WHERE p.provider_id = ?';
+      params.push(providerId);
+    }
+    params.push(Math.max(1, Math.min(500, limit)));
+
+    const rows = await databaseClient.query<Record<string, unknown>>(
+      `SELECT p.id,
+              p.provider_id AS providerId,
+              p.name,
+              p.price,
+              p.description,
+              p.image_url AS imageUrl,
+              p.category,
+              p.sku,
+              p.stock,
+              p.provider,
+              p.ai_status AS aiStatus,
+              p.ai_error AS aiError,
+              n.normalized_name AS normalizedName,
+              n.normalized_description AS normalizedDescription,
+              n.normalized_category AS normalizedCategory,
+              n.events,
+              n.audience,
+              n.emotions AS emotion,
+              p.quality_status AS qualityStatus,
+              p.quality_issues AS qualityIssues
+       FROM ${this.productsTable} p
+       LEFT JOIN ${this.normalizedTable} n
+         ON n.provider_id = p.provider_id AND n.product_id = p.id
+       ${whereClause}
+       ORDER BY p.updated_at ASC
+       LIMIT ?`,
+      params,
+    );
+
+    return rows.map(rowToQualityCheck);
+  }
+
+  async findProductsWithQualityIssues(providerId?: string, limit: number = 100): Promise<ProductQualityIssueRow[]> {
+    const params: unknown[] = [];
+    const conditions: string[] = ["p.quality_status IS NOT NULL", "p.quality_status <> 'ok'"];
+    if (providerId) {
+      conditions.push('p.provider_id = ?');
+      params.push(providerId);
+    }
+    params.push(Math.max(1, Math.min(500, limit)));
+
+    const rows = await databaseClient.query<Record<string, unknown>>(
+      `SELECT p.id,
+              p.provider_id AS providerId,
+              p.name,
+              p.price,
+              p.description,
+              p.image_url AS imageUrl,
+              p.category,
+              p.sku,
+              p.stock,
+              p.provider,
+              p.ai_status AS aiStatus,
+              p.ai_error AS aiError,
+              n.normalized_name AS normalizedName,
+              n.normalized_description AS normalizedDescription,
+              n.normalized_category AS normalizedCategory,
+              n.events,
+              n.audience,
+              n.emotions AS emotion,
+              p.quality_status AS qualityStatus,
+              p.quality_issues AS qualityIssues
+       FROM ${this.productsTable} p
+       LEFT JOIN ${this.normalizedTable} n
+         ON n.provider_id = p.provider_id AND n.product_id = p.id
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY p.updated_at DESC
+       LIMIT ?`,
+      params,
+    );
+
+    return rows.map((row) => {
+      const mapped = rowToQualityCheck(row);
+      return {
+        ...mapped,
+        qualityStatus: mapped.qualityStatus ?? 'issues',
+        qualityIssues: mapped.qualityIssues ?? [],
+      };
+    });
   }
 
   async findAllWithNormalized(providerId?: string): Promise<{ product: Product; hasNormalized: boolean }[]> {

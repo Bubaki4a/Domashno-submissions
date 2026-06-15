@@ -1,10 +1,12 @@
 import cron from 'node-cron';
 import { runImportJob } from '../../jobs/importJob';
 import { runEnrichJob } from '../../jobs/enrichJob';
+import { runDataQualityJob } from '../../jobs/dataQualityJob';
 
 const CRON_ENABLED = process.env.CRON_ENABLED === 'true' || process.env.CRON_ENABLED === '1';
 const CRON_IMPORT_SCHEDULE = process.env.CRON_IMPORT_SCHEDULE || '0 */6 * * *'; // every 6 hours
 const CRON_ENRICH_SCHEDULE = process.env.CRON_ENRICH_SCHEDULE || '*/15 * * * *'; // every 15 minutes
+const CRON_DATA_QUALITY_SCHEDULE = process.env.CRON_DATA_QUALITY_SCHEDULE || '0 */1 * * *'; // every hour
 
 export function startScheduler(): void {
   if (!CRON_ENABLED) {
@@ -33,4 +35,15 @@ export function startScheduler(): void {
       });
   });
   console.log(`⏰ Cron: enrich job scheduled (${CRON_ENRICH_SCHEDULE})`);
+
+  cron.schedule(CRON_DATA_QUALITY_SCHEDULE, () => {
+    runDataQualityJob()
+      .then((outcome) => {
+        console.log(`[cron] data quality job finished: runId=${outcome.runId} status=${outcome.status} processed=${outcome.processedCount}`);
+      })
+      .catch((err) => {
+        console.error('[cron] data quality job failed:', err instanceof Error ? err.message : err);
+      });
+  });
+  console.log(`⏰ Cron: data quality job scheduled (${CRON_DATA_QUALITY_SCHEDULE})`);
 }

@@ -21,6 +21,9 @@ const mockProductRepo: IProductRepository = {
   updateAiStatus: vi.fn(),
   setAiStatusByProvider: vi.fn(),
   resetFailedAiStatus: vi.fn(),
+  markProductQuality: vi.fn(),
+  findProductsForQualityCheck: vi.fn(),
+  findProductsWithQualityIssues: vi.fn(),
 };
 
 const mockChatClient: IChatCompletionClient = {

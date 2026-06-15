@@ -5,6 +5,7 @@ import { ListPipelineRunsUseCase } from '../../application/usecases/Job/ListPipe
 import { GetPipelineRunByIdUseCase } from '../../application/usecases/Job/GetPipelineRunByIdUseCase';
 import { TriggerImportJobUseCase } from '../../application/usecases/Job/TriggerImportJobUseCase';
 import { TriggerEnrichJobUseCase } from '../../application/usecases/Job/TriggerEnrichJobUseCase';
+import { TriggerDataQualityJobUseCase } from '../../application/usecases/Job/TriggerDataQualityJobUseCase';
 import { ListFailedProductsUseCase } from '../../application/usecases/Job/ListFailedProductsUseCase';
 import { RetryFailedProductsUseCase } from '../../application/usecases/Job/RetryFailedProductsUseCase';
 import type { PipelineRun } from '../../domain/entities/PipelineRun/PipelineRun';
@@ -18,6 +19,7 @@ const listPipelineRunsUseCase = new ListPipelineRunsUseCase(pipelineRunRepositor
 const getPipelineRunByIdUseCase = new GetPipelineRunByIdUseCase(pipelineRunRepository);
 const triggerImportJobUseCase = new TriggerImportJobUseCase();
 const triggerEnrichJobUseCase = new TriggerEnrichJobUseCase();
+const triggerDataQualityJobUseCase = new TriggerDataQualityJobUseCase();
 const listFailedProductsUseCase = new ListFailedProductsUseCase(productRepository);
 const retryFailedProductsUseCase = new RetryFailedProductsUseCase(productRepository);
 
@@ -64,6 +66,28 @@ router.post('/enrich', async (req: Request, res: Response) => {
     const providerId = req.body?.providerId as string | undefined;
     const batchSize = req.body?.batchSize as number | undefined;
     const outcome = await triggerEnrichJobUseCase.execute({ providerId, batchSize });
+    const statusCode = outcome.status === 'success' ? 200 : 207;
+    res.status(statusCode).json({
+      success: outcome.status === 'success',
+      runId: outcome.runId,
+      status: outcome.status,
+      processedCount: outcome.processedCount,
+      successCount: outcome.successCount,
+      failedCount: outcome.failedCount,
+      error: outcome.error,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    res.status(400).json({ success: false, error: message });
+  }
+});
+
+// POST /api/admin/jobs/data-quality
+router.post('/data-quality', async (req: Request, res: Response) => {
+  try {
+    const providerId = req.body?.providerId as string | undefined;
+    const batchSize = req.body?.batchSize as number | undefined;
+    const outcome = await triggerDataQualityJobUseCase.execute({ providerId, batchSize });
     const statusCode = outcome.status === 'success' ? 200 : 207;
     res.status(statusCode).json({
       success: outcome.status === 'success',
