@@ -1,0 +1,71 @@
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { createServer } from '../../../src/infrastructure/web/server';
+import { loginAsAdmin } from '../helpers/integrationTestHelpers';
+
+const app = createServer();
+
+async function createSubmission(token: string, data?: Partial<{ name: string; email: string; message: string }>) {
+  const res = await request(app)
+    .post('/api/submit')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      name: data?.name ?? 'Ivan Ivanov',
+      email: data?.email ?? 'ivan@example.com',
+      message: data?.message ?? 'Hello world',
+    });
+  return res.body as { id: string; name: string; email: string; message: string; createdAt: string };
+}
+
+describe('API integration: GET /api/submissions/:id', () => {
+  it('returns 401 without authentication token', async () => {
+    await request(app).get('/api/submissions/some-id').expect(401);
+  });
+
+  it('returns 200 with submission data for a valid id', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .get(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.id).toBe(created.id);
+    expect(res.body.name).toBe('Ivan Ivanov');
+    expect(res.body.email).toBe('ivan@example.com');
+    expect(res.body.message).toBe('Hello world');
+    expect(res.body.createdAt).toBeDefined();
+  });
+
+  it('returns 404 for a non-existent id', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .get('/api/submissions/does-not-exist-9999')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(404);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('the returned submission matches the one that was created', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token, {
+      name: 'Maria',
+      email: 'maria@example.com',
+      message: 'Specific message',
+    });
+
+    const res = await request(app)
+      .get(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.name).toBe('Maria');
+    expect(res.body.email).toBe('maria@example.com');
+    expect(res.body.message).toBe('Specific message');
+  });
+});

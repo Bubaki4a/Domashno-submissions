@@ -1,0 +1,130 @@
+# GetAllSubmissionsUseCase
+
+## Описание
+
+Извлича всички заявки (submissions) от хранилището и ги връща сортирани по дата на създаване — от най-нова към най-стара.
+
+---
+
+## Местоположение
+
+```
+backend/src/application/usecases/Submission/GetAllSubmissionsUseCase.ts
+```
+
+---
+
+## Зависимости
+
+| Зависимост | Интерфейс | Описание |
+|---|---|---|
+| `repository` | `ISubmissionRepository` | Абстракция над хранилището за заявки |
+
+---
+
+## Входни данни
+
+Методът `execute()` не приема параметри.
+
+---
+
+## Изходни данни
+
+```typescript
+class GetSubmissionsResponse {
+  success: boolean;   // винаги true
+  message: string;    // "Submissions retrieved successfully"
+  count: number;      // брой върнати заявки
+  data: Array<{
+    id: string;
+    name: string;
+    email: string;
+    message: string;
+    createdAt: string;
+  }>;
+}
+```
+
+---
+
+## Логика на изпълнение
+
+1. Извиква `repository.findAll()` — връща масив от всички заявки.
+2. Сортира масива по `createdAt` низходящо (най-нова → най-стара).
+3. Връща `new GetSubmissionsResponse(sortedSubmissions)`.
+
+---
+
+## Сортиране
+
+Сортирането използва `Date` обекти за сравнение:
+
+```typescript
+submissions.sort((a, b) =>
+  new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+);
+```
+
+Ако две заявки имат еднаква дата, редът между тях е неопределен.
+
+---
+
+## HTTP ендпойнт
+
+```
+GET /api/submissions
+Authorization: Bearer <token>   (задължително — само administrator или manager)
+```
+
+**Успешен отговор (200):**
+```json
+{
+  "success": true,
+  "message": "Submissions retrieved successfully",
+  "count": 2,
+  "data": [
+    {
+      "id": "1717862500000-xy9z12abc",
+      "name": "Мария Петрова",
+      "email": "maria@example.com",
+      "message": "Второ запитване",
+      "createdAt": "2024-06-08T13:00:00.000Z"
+    },
+    {
+      "id": "1717862400000-ab3cd9ef1",
+      "name": "Иван Иванов",
+      "email": "ivan@example.com",
+      "message": "Първо запитване",
+      "createdAt": "2024-06-08T12:00:00.000Z"
+    }
+  ]
+}
+```
+
+**При непозволен достъп (401 / 403):**
+```json
+{
+  "success": false,
+  "error": "Unauthorized"
+}
+```
+
+---
+
+## Достъп
+
+Ендпойнтът е защитен с `requireRole(['administrator', 'manager'])`. Потребители с роля `operator` получават 403.
+
+---
+
+## Примерна употреба
+
+```typescript
+const repository = createSubmissionRepository();
+const useCase = new GetAllSubmissionsUseCase(repository);
+
+const response = await useCase.execute();
+
+console.log(response.count);       // 42
+console.log(response.data[0].id);  // най-новата заявка
+```

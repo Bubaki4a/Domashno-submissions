@@ -1,0 +1,56 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GetMeUseCase } from '../../../../../src/application/usecases/Auth/GetMeUseCase';
+import type { IUserRepository } from '../../../../../src/infrastructure/users/interfaces/IUserRepository';
+import type { User } from '../../../../../src/domain/entities/User/User';
+
+const mockFindById = vi.fn();
+
+const mockRepo: IUserRepository = {
+  findByEmail: vi.fn(),
+  findById: mockFindById,
+  findAll: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+};
+
+const stubUser: User = {
+  id: 1,
+  email: 'admin@example.com',
+  name: 'Admin',
+  role: 'administrator',
+  createdAt: new Date('2024-01-01'),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('GetMeUseCase', () => {
+  it('returns the user when found', async () => {
+    mockFindById.mockResolvedValue(stubUser);
+    const useCase = new GetMeUseCase(mockRepo);
+
+    const result = await useCase.execute(1);
+
+    expect(mockFindById).toHaveBeenCalledWith(1);
+    expect(result).toEqual(stubUser);
+  });
+
+  it('returns null when user does not exist', async () => {
+    mockFindById.mockResolvedValue(null);
+    const useCase = new GetMeUseCase(mockRepo);
+
+    const result = await useCase.execute(999);
+
+    expect(result).toBeNull();
+  });
+
+  it('passes the userId to the repository unchanged', async () => {
+    mockFindById.mockResolvedValue(stubUser);
+    const useCase = new GetMeUseCase(mockRepo);
+
+    await useCase.execute(42);
+
+    expect(mockFindById).toHaveBeenCalledWith(42);
+  });
+});

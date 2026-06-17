@@ -1,0 +1,133 @@
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { createServer } from '../../../src/infrastructure/web/server';
+import { loginAsAdmin } from '../helpers/integrationTestHelpers';
+
+const app = createServer();
+
+async function createSubmission(token: string, data?: Partial<{ name: string; email: string; message: string }>) {
+  const res = await request(app)
+    .post('/api/submit')
+    .set('Authorization', `Bearer ${token}`)
+    .send({
+      name: data?.name ?? 'Ivan Ivanov',
+      email: data?.email ?? 'ivan@example.com',
+      message: data?.message ?? 'Original message',
+    });
+  return res.body as { id: string; name: string; email: string; message: string; createdAt: string };
+}
+
+describe('API integration: PUT /api/submissions/:id', () => {
+  it('returns 401 without authentication token', async () => {
+    await request(app)
+      .put('/api/submissions/some-id')
+      .send({ name: 'X', email: 'x@x.com', message: 'X' })
+      .expect(401);
+  });
+
+  it('updates the submission and returns 200 with updated fields', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Updated Name', email: 'updated@example.com', message: 'Updated message' })
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.id).toBe(created.id);
+    expect(res.body.name).toBe('Updated Name');
+    expect(res.body.email).toBe('updated@example.com');
+    expect(res.body.message).toBe('Updated message');
+  });
+
+  it('preserves the original id and createdAt after update', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'New', email: 'new@example.com', message: 'New msg' })
+      .expect(200);
+
+    expect(res.body.id).toBe(created.id);
+    expect(res.body.createdAt).toBe(created.createdAt);
+  });
+
+  it('returns 404 when updating a non-existent submission', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .put('/api/submissions/does-not-exist-9999')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'X', email: 'x@x.com', message: 'X' })
+      .expect(404);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'x@x.com', message: 'X' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/name/i);
+  });
+
+  it('returns 400 when email format is invalid', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'X', email: 'bad-email', message: 'X' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/email/i);
+  });
+
+  it('returns 400 when message is missing', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    const res = await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'X', email: 'x@x.com' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/message/i);
+  });
+
+  it('confirms the update is persisted by fetching the submission afterwards', async () => {
+    const { token } = await loginAsAdmin(app);
+    const created = await createSubmission(token);
+
+    await request(app)
+      .put(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Persisted', email: 'persisted@example.com', message: 'Persisted msg' })
+      .expect(200);
+
+    const fetched = await request(app)
+      .get(`/api/submissions/${created.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(fetched.body.name).toBe('Persisted');
+    expect(fetched.body.email).toBe('persisted@example.com');
+    expect(fetched.body.message).toBe('Persisted msg');
+  });
+});

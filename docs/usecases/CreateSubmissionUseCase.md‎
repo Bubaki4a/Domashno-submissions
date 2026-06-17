@@ -1,0 +1,136 @@
+# CreateSubmissionUseCase
+
+## Описание
+
+Създава нова заявка (submission) от потребителски вход. Валидира данните чрез domain entity, генерира уникален идентификатор и дата на създаване, записва заявката в хранилището и връща отговор с пълните данни.
+
+---
+
+## Местоположение
+
+```
+backend/src/application/usecases/Submission/CreateSubmissionUseCase.ts
+```
+
+---
+
+## Зависимости
+
+| Зависимост | Интерфейс | Описание |
+|---|---|---|
+| `repository` | `ISubmissionRepository` | Абстракция над хранилището за заявки |
+
+---
+
+## Входни данни
+
+```typescript
+interface CreateSubmissionRequest {
+  name: string;
+  email: string;
+  message: string;
+}
+```
+
+---
+
+## Изходни данни
+
+```typescript
+class CreateSubmissionResponse {
+  success: boolean;      // винаги true при успех
+  message: string;       // "Submission created successfully"
+  id: string;
+  name: string;
+  email: string;         // нормализиран в lower case
+  message: string;
+  createdAt: string;     // ISO 8601 timestamp
+}
+```
+
+---
+
+## Логика на изпълнение
+
+1. Извиква `SubmissionEntity.create(request)` — domain обектът валидира полетата и генерира `id` и `createdAt`.
+2. Записва entity-то чрез `repository.save(submission)`.
+3. Връща `new CreateSubmissionResponse(submission)`.
+
+---
+
+## Валидационни правила
+
+| Поле | Правило | Грешка |
+|---|---|---|
+| `name` | Задължително, не може да е само празни символи | `"Name is required"` |
+| `email` | Задължително, трябва да отговаря на regex `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` | `"Email is required"` / `"Invalid email format"` |
+| `message` | Задължително, не може да е само празни символи | `"Message is required"` |
+
+Валидацията се извършва в `SubmissionEntity.create()`. При грешка се хвърля `Error` с горепосоченото съобщение.
+
+---
+
+## Трансформации
+
+- `email` се нормализира в lower case и се премахват водещи/крайни интервали.
+- `name` и `message` се тримват.
+- `id` се генерира като `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`.
+- `createdAt` се задава към текущия момент (`new Date().toISOString()`).
+
+---
+
+## HTTP ендпойнт
+
+```
+POST /api/submit
+Authorization: Bearer <token>   (задължително)
+Content-Type: application/json
+```
+
+**Примерна заявка:**
+```json
+{
+  "name": "Иван Иванов",
+  "email": "ivan@example.com",
+  "message": "Здравейте, имам въпрос."
+}
+```
+
+**Успешен отговор (201):**
+```json
+{
+  "success": true,
+  "message": "Submission created successfully",
+  "id": "1717862400000-ab3cd9ef1",
+  "name": "Иван Иванов",
+  "email": "ivan@example.com",
+  "message": "Здравейте, имам въпрос.",
+  "createdAt": "2024-06-08T12:00:00.000Z"
+}
+```
+
+**Грешен отговор (400):**
+```json
+{
+  "success": false,
+  "error": "Email is required"
+}
+```
+
+---
+
+## Примерна употреба
+
+```typescript
+const repository = createSubmissionRepository();
+const useCase = new CreateSubmissionUseCase(repository);
+
+const response = await useCase.execute({
+  name: 'Иван Иванов',
+  email: 'ivan@example.com',
+  message: 'Здравейте!',
+});
+
+console.log(response.id);        // "1717862400000-ab3cd9ef1"
+console.log(response.createdAt); // "2024-06-08T12:00:00.000Z"
+```

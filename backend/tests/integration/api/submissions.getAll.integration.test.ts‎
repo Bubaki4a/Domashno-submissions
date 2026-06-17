@@ -1,0 +1,87 @@
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { createServer } from '../../../src/infrastructure/web/server';
+import { loginAsAdmin } from '../helpers/integrationTestHelpers';
+
+const app = createServer();
+
+describe('API integration: GET /api/submissions', () => {
+  it('returns 401 without authentication token', async () => {
+    await request(app).get('/api/submissions').expect(401);
+  });
+
+  it('returns 200 with submissions list for admin', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .get('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.success).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(typeof res.body.count).toBe('number');
+  });
+
+  it('returns submissions sorted newest first', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    // Create two submissions in order
+    await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'First', email: 'first@example.com', message: 'First submission' });
+
+    await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Second', email: 'second@example.com', message: 'Second submission' });
+
+    const res = await request(app)
+      .get('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    const data = res.body.data as Array<{ createdAt: string }>;
+    if (data.length >= 2) {
+      const firstDate = new Date(data[0].createdAt).getTime();
+      const secondDate = new Date(data[1].createdAt).getTime();
+      expect(firstDate).toBeGreaterThanOrEqual(secondDate);
+    }
+  });
+
+  it('count matches the length of the data array', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .get('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(res.body.count).toBe(res.body.data.length);
+  });
+
+  it('each submission has required fields', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    // Ensure at least one submission exists
+    await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Test User', email: 'test@example.com', message: 'Test' });
+
+    const res = await request(app)
+      .get('/api/submissions')
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    if (res.body.data.length > 0) {
+      const sub = res.body.data[0];
+      expect(sub).toHaveProperty('id');
+      expect(sub).toHaveProperty('name');
+      expect(sub).toHaveProperty('email');
+      expect(sub).toHaveProperty('message');
+      expect(sub).toHaveProperty('createdAt');
+    }
+  });
+});

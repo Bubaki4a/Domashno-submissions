@@ -1,0 +1,85 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { LoginUseCase } from '../../../../../src/application/usecases/Auth/LoginUseCase';
+import type { IUserRepository } from '../../../../../src/infrastructure/users/interfaces/IUserRepository';
+import type { UserWithPassword } from '../../../../../src/domain/entities/User/User';
+import bcrypt from 'bcrypt';
+
+vi.mock('bcrypt');
+
+const mockFindByEmail = vi.fn();
+
+const mockRepo: IUserRepository = {
+  findByEmail: mockFindByEmail,
+  findById: vi.fn(),
+  findAll: vi.fn(),
+  create: vi.fn(),
+  update: vi.fn(),
+};
+
+const stubUser: UserWithPassword = {
+  id: 1,
+  email: 'admin@example.com',
+  name: 'Admin',
+  role: 'administrator',
+  createdAt: new Date('2024-01-01'),
+  passwordHash: '$2b$10$hashedpassword',
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  process.env.JWT_SECRET = 'test-secret';
+});
+
+describe('LoginUseCase', () => {
+  it('returns user and token on valid credentials', async () => {
+    mockFindByEmail.mockResolvedValue(stubUser);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const useCase = new LoginUseCase(mockRepo);
+    const result = await useCase.execute({ email: 'admin@example.com', password: '1' });
+
+    expect(result.user.email).toBe('admin@example.com');
+    expect(result.user.role).toBe('administrator');
+    expect(result.token).toBeDefined();
+    expect(typeof result.token).toBe('string');
+  });
+
+  it('trims whitespace from email before lookup', async () => {
+    mockFindByEmail.mockResolvedValue(stubUser);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const useCase = new LoginUseCase(mockRepo);
+    await useCase.execute({ email: '  admin@example.com  ', password: '1' });
+
+    expect(mockFindByEmail).toHaveBeenCalledWith('admin@example.com');
+  });
+
+  it('throws when user is not found', async () => {
+    mockFindByEmail.mockResolvedValue(null);
+
+    const useCase = new LoginUseCase(mockRepo);
+    await expect(
+      useCase.execute({ email: 'nobody@example.com', password: 'pass' }),
+    ).rejects.toThrow('Invalid email or password');
+  });
+
+  it('throws when password is wrong', async () => {
+    mockFindByEmail.mockResolvedValue(stubUser);
+    vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+
+    const useCase = new LoginUseCase(mockRepo);
+    await expect(
+      useCase.execute({ email: 'admin@example.com', password: 'wrong' }),
+    ).rejects.toThrow('Invalid email or password');
+  });
+
+  it('does not expose passwordHash in the returned user', async () => {
+    mockFindByEmail.mockResolvedValue(stubUser);
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+
+    const useCase = new LoginUseCase(mockRepo);
+    const result = await useCase.execute({ email: 'admin@example.com', password: '1' });
+
+    expect((result.user as any).passwordHash).toBeUndefined();
+  });
+});

@@ -1,0 +1,100 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GetAllSubmissionsUseCase } from '../../../../../src/application/usecases/Submission/GetAllSubmissionsUseCase';
+import type { ISubmissionRepository } from '../../../../../src/infrastructure/submissions/interfaces/ISubmissionRepository';
+import type { Submission } from '../../../../../src/domain/entities/Submission/Submission';
+
+const mockFindAll = vi.fn();
+
+const mockRepo: ISubmissionRepository = {
+  save: vi.fn(),
+  findAll: mockFindAll,
+  findById: vi.fn(),
+  saveAll: vi.fn(),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const makeSubmission = (id: string, createdAt: string): Submission => ({
+  id,
+  name: 'Test User',
+  email: 'test@example.com',
+  message: 'Hello',
+  createdAt,
+});
+
+describe('GetAllSubmissionsUseCase', () => {
+  it('returns empty list when repository is empty', async () => {
+    mockFindAll.mockResolvedValue([]);
+    const useCase = new GetAllSubmissionsUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result.data).toHaveLength(0);
+    expect(result.count).toBe(0);
+  });
+
+  it('returns all submissions', async () => {
+    const submissions = [
+      makeSubmission('1', '2024-01-01T10:00:00.000Z'),
+      makeSubmission('2', '2024-01-02T10:00:00.000Z'),
+    ];
+    mockFindAll.mockResolvedValue(submissions);
+    const useCase = new GetAllSubmissionsUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result.data).toHaveLength(2);
+    expect(result.count).toBe(2);
+  });
+
+  it('sorts submissions newest first', async () => {
+    const submissions = [
+      makeSubmission('old', '2024-01-01T10:00:00.000Z'),
+      makeSubmission('new', '2024-06-01T10:00:00.000Z'),
+      makeSubmission('mid', '2024-03-01T10:00:00.000Z'),
+    ];
+    mockFindAll.mockResolvedValue(submissions);
+    const useCase = new GetAllSubmissionsUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result.data[0].id).toBe('new');
+    expect(result.data[1].id).toBe('mid');
+    expect(result.data[2].id).toBe('old');
+  });
+
+  it('does not mutate the original array order', async () => {
+    const submissions = [
+      makeSubmission('old', '2024-01-01T10:00:00.000Z'),
+      makeSubmission('new', '2024-06-01T10:00:00.000Z'),
+    ];
+    mockFindAll.mockResolvedValue([...submissions]);
+    const useCase = new GetAllSubmissionsUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result.data[0].id).toBe('new');
+    expect(result.data[1].id).toBe('old');
+  });
+
+  it('maps all fields correctly', async () => {
+    const sub = makeSubmission('abc', '2024-06-01T12:00:00.000Z');
+    sub.name = 'Ivan';
+    sub.email = 'ivan@test.com';
+    sub.message = 'My message';
+    mockFindAll.mockResolvedValue([sub]);
+    const useCase = new GetAllSubmissionsUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result.data[0]).toMatchObject({
+      id: 'abc',
+      name: 'Ivan',
+      email: 'ivan@test.com',
+      message: 'My message',
+      createdAt: '2024-06-01T12:00:00.000Z',
+    });
+  });
+});

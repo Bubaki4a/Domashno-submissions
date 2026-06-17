@@ -1,0 +1,57 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GetAllUsersUseCase } from '../../../../../src/application/usecases/User/GetAllUsersUseCase';
+import type { IUserRepository } from '../../../../../src/infrastructure/users/interfaces/IUserRepository';
+import type { User } from '../../../../../src/domain/entities/User/User';
+
+const mockFindAll = vi.fn();
+
+const mockRepo: IUserRepository = {
+  findByEmail: vi.fn(),
+  findById: vi.fn(),
+  findAll: mockFindAll,
+  create: vi.fn(),
+  update: vi.fn(),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const makeUser = (id: number, role: User['role']): User => ({
+  id,
+  email: `user${id}@example.com`,
+  name: `User ${id}`,
+  role,
+  createdAt: new Date('2024-01-01'),
+});
+
+describe('GetAllUsersUseCase', () => {
+  it('returns all users from the repository', async () => {
+    const users = [makeUser(1, 'administrator'), makeUser(2, 'manager')];
+    mockFindAll.mockResolvedValue(users);
+    const useCase = new GetAllUsersUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result).toEqual(users);
+    expect(result).toHaveLength(2);
+  });
+
+  it('returns an empty array when no users exist', async () => {
+    mockFindAll.mockResolvedValue([]);
+    const useCase = new GetAllUsersUseCase(mockRepo);
+
+    const result = await useCase.execute();
+
+    expect(result).toEqual([]);
+  });
+
+  it('calls findAll exactly once', async () => {
+    mockFindAll.mockResolvedValue([]);
+    const useCase = new GetAllUsersUseCase(mockRepo);
+
+    await useCase.execute();
+
+    expect(mockFindAll).toHaveBeenCalledOnce();
+  });
+});

@@ -1,0 +1,141 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { UpdateProfileUseCase } from '../../../../../src/application/usecases/Auth/UpdateProfileUseCase';
+import type { IUserRepository } from '../../../../../src/infrastructure/users/interfaces/IUserRepository';
+import type { User, UserWithPassword } from '../../../../../src/domain/entities/User/User';
+import bcrypt from 'bcrypt';
+
+vi.mock('bcrypt');
+
+const mockFindById = vi.fn();
+const mockFindByEmail = vi.fn();
+const mockUpdate = vi.fn();
+
+const mockRepo: IUserRepository = {
+  findByEmail: mockFindByEmail,
+  findById: mockFindById,
+  findAll: vi.fn(),
+  create: vi.fn(),
+  update: mockUpdate,
+};
+
+const stubUser: User = {
+  id: 1,
+  email: 'user@example.com',
+  name: 'Old Name',
+  role: 'operator',
+  createdAt: new Date('2024-01-01'),
+};
+
+const stubUserWithPassword: UserWithPassword = {
+  ...stubUser,
+  passwordHash: '$2b$10$hashedpw',
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockFindById.mockResolvedValue(stubUser);
+  mockFindByEmail.mockResolvedValue(stubUserWithPassword);
+  mockUpdate.mockResolvedValue({ ...stubUser });
+});
+
+describe('UpdateProfileUseCase', () => {
+  it('updates name successfully', async () => {
+    mockUpdate.mockResolvedValue({ ...stubUser, name: 'New Name' });
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    const result = await useCase.execute({ userId: 1, name: 'New Name' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(1, { name: 'New Name' });
+    expect(result.name).toBe('New Name');
+  });
+
+  it('trims whitespace from name', async () => {
+    const useCase = new UpdateProfileUseCase(mockRepo);
+    await useCase.execute({ userId: 1, name: '  Trimmed  ' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(1, { name: 'Trimmed' });
+  });
+
+  it('throws when name is empty after trim', async () => {
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await expect(useCase.execute({ userId: 1, name: '   ' })).rejects.toThrow(
+      'Name cannot be empty',
+    );
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it('updates email and lowercases it', async () => {
+    mockFindByEmail
+      .mockResolvedValueOnce(stubUserWithPassword) // first call: load user
+      .mockResolvedValueOnce(null);                // second call: email availability check
+    mockUpdate.mockResolvedValue({ ...stubUser, email: 'new@example.com' });
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    const result = await useCase.execute({ userId: 1, email: 'NEW@EXAMPLE.COM' });
+
+    expect(mockUpdate).toHaveBeenCalledWith(1, { email: 'new@example.com' });
+    expect(result.email).toBe('new@example.com');
+  });
+
+  it('throws when email is already used by another user', async () => {
+    mockFindByEmail
+      .mockResolvedValueOnce(stubUserWithPassword)
+      .mockResolvedValueOnce({ ...stubUserWithPassword, id: 99 }); // owned by someone else
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await expect(
+      useCase.execute({ userId: 1, email: 'taken@example.com' }),
+    ).rejects.toThrow('Email is already in use');
+  });
+
+  it('updates password when current password is correct', async () => {
+    vi.mocked(bcrypt.compare).mockResolvedValue(true as never);
+    vi.mocked(bcrypt.hash).mockResolvedValue('$2b$10$newhash' as never);
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await useCase.execute({
+      userId: 1,
+      currentPassword: 'old-pass',
+      newPassword: 'new-pass',
+    });
+
+    expect(mockUpdate).toHaveBeenCalledWith(1, { passwordHash: '$2b$10$newhash' });
+  });
+
+  it('throws when current password is wrong', async () => {
+    vi.mocked(bcrypt.compare).mockResolvedValue(false as never);
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await expect(
+      useCase.execute({ userId: 1, currentPassword: 'wrong', newPassword: 'new' }),
+    ).rejects.toThrow('Current password is incorrect');
+  });
+
+  it('throws when newPassword is provided without currentPassword', async () => {
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await expect(
+      useCase.execute({ userId: 1, newPassword: 'new-pass' }),
+    ).rejects.toThrow('Current password is required to set a new password');
+  });
+
+  it('throws when user is not found', async () => {
+    mockFindById.mockResolvedValue(null);
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    await expect(useCase.execute({ userId: 999 })).rejects.toThrow('User not found');
+  });
+
+  it('returns current user unchanged when no updates are provided', async () => {
+    mockFindById
+      .mockResolvedValueOnce(stubUser)   // initial load
+      .mockResolvedValueOnce(stubUser);  // re-fetch at end (no-op branch)
+    const useCase = new UpdateProfileUseCase(mockRepo);
+
+    const result = await useCase.execute({ userId: 1 });
+
+    expect(mockUpdate).not.toHaveBeenCalled();
+    expect(result).toEqual(stubUser);
+  });
+});

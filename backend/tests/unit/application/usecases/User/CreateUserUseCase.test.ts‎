@@ -1,0 +1,118 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CreateUserUseCase } from '../../../../../src/application/usecases/User/CreateUserUseCase';
+import type { IUserRepository } from '../../../../../src/infrastructure/users/interfaces/IUserRepository';
+import type { User } from '../../../../../src/domain/entities/User/User';
+import bcrypt from 'bcrypt';
+
+vi.mock('bcrypt');
+
+const mockFindByEmail = vi.fn();
+const mockCreate = vi.fn();
+
+const mockRepo: IUserRepository = {
+  findByEmail: mockFindByEmail,
+  findById: vi.fn(),
+  findAll: vi.fn(),
+  create: mockCreate,
+  update: vi.fn(),
+};
+
+const stubCreatedUser: User = {
+  id: 2,
+  email: 'newuser@example.com',
+  name: 'New User',
+  role: 'operator',
+  createdAt: new Date('2024-06-01'),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(bcrypt.hash).mockResolvedValue('$2b$10$hashed' as never);
+});
+
+describe('CreateUserUseCase', () => {
+  it('creates and returns a new user', async () => {
+    mockFindByEmail.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(stubCreatedUser);
+    const useCase = new CreateUserUseCase(mockRepo);
+
+    const result = await useCase.execute({
+      email: 'newuser@example.com',
+      password: 'secret',
+      name: 'New User',
+      role: 'operator',
+    });
+
+    expect(result).toEqual(stubCreatedUser);
+    expect(mockCreate).toHaveBeenCalledOnce();
+  });
+
+  it('lowercases and trims email before saving', async () => {
+    mockFindByEmail.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(stubCreatedUser);
+    const useCase = new CreateUserUseCase(mockRepo);
+
+    await useCase.execute({
+      email: '  UPPER@EXAMPLE.COM  ',
+      password: 'pass',
+      name: 'User',
+      role: 'manager',
+    });
+
+    expect(mockFindByEmail).toHaveBeenCalledWith('upper@example.com');
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'upper@example.com' }),
+    );
+  });
+
+  it('trims whitespace from name', async () => {
+    mockFindByEmail.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(stubCreatedUser);
+    const useCase = new CreateUserUseCase(mockRepo);
+
+    await useCase.execute({
+      email: 'user@example.com',
+      password: 'pass',
+      name: '  Spaced Name  ',
+      role: 'operator',
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Spaced Name' }),
+    );
+  });
+
+  it('hashes the password before saving', async () => {
+    mockFindByEmail.mockResolvedValue(null);
+    mockCreate.mockResolvedValue(stubCreatedUser);
+    const useCase = new CreateUserUseCase(mockRepo);
+
+    await useCase.execute({
+      email: 'user@example.com',
+      password: 'plain-password',
+      name: 'User',
+      role: 'operator',
+    });
+
+    expect(bcrypt.hash).toHaveBeenCalledWith('plain-password', 10);
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ passwordHash: '$2b$10$hashed' }),
+    );
+  });
+
+  it('throws when email is already taken', async () => {
+    mockFindByEmail.mockResolvedValue({ id: 1 } as any);
+    const useCase = new CreateUserUseCase(mockRepo);
+
+    await expect(
+      useCase.execute({
+        email: 'existing@example.com',
+        password: 'pass',
+        name: 'User',
+        role: 'operator',
+      }),
+    ).rejects.toThrow('User with this email already exists');
+
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+});

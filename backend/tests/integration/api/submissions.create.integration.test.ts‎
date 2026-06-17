@@ -1,0 +1,108 @@
+import { describe, it, expect } from 'vitest';
+import request from 'supertest';
+import { createServer } from '../../../src/infrastructure/web/server';
+import { loginAsAdmin } from '../helpers/integrationTestHelpers';
+
+const app = createServer();
+
+describe('API integration: POST /api/submit', () => {
+  it('returns 401 without authentication token', async () => {
+    await request(app)
+      .post('/api/submit')
+      .send({ name: 'Ivan', email: 'ivan@example.com', message: 'Hello' })
+      .expect(401);
+  });
+
+  it('creates a submission and returns 201 with valid data', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ivan Ivanov', email: 'ivan@example.com', message: 'Test message' })
+      .expect(201);
+
+    expect(res.body.success).toBe(true);
+    expect(res.body.name).toBe('Ivan Ivanov');
+    expect(res.body.email).toBe('ivan@example.com');
+    expect(res.body.message).toBe('Test message');
+    expect(res.body.id).toBeDefined();
+    expect(res.body.createdAt).toBeDefined();
+  });
+
+  it('lowercases the email in the response', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ivan', email: 'IVAN@EXAMPLE.COM', message: 'Hello' })
+      .expect(201);
+
+    expect(res.body.email).toBe('ivan@example.com');
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ email: 'ivan@example.com', message: 'Hello' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/name/i);
+  });
+
+  it('returns 400 when email is missing', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ivan', message: 'Hello' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/email/i);
+  });
+
+  it('returns 400 when email format is invalid', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ivan', email: 'not-an-email', message: 'Hello' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/email/i);
+  });
+
+  it('returns 400 when message is missing', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: 'Ivan', email: 'ivan@example.com' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+    expect(res.body.error).toMatch(/message/i);
+  });
+
+  it('returns 400 when all fields are empty strings', async () => {
+    const { token } = await loginAsAdmin(app);
+
+    const res = await request(app)
+      .post('/api/submit')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ name: '', email: '', message: '' })
+      .expect(400);
+
+    expect(res.body.success).toBe(false);
+  });
+});

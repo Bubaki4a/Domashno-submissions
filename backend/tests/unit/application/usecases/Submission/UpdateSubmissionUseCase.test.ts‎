@@ -1,0 +1,133 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { UpdateSubmissionUseCase } from '../../../../../src/application/usecases/Submission/UpdateSubmissionUseCase';
+import type { ISubmissionRepository } from '../../../../../src/infrastructure/submissions/interfaces/ISubmissionRepository';
+import type { Submission } from '../../../../../src/domain/entities/Submission/Submission';
+
+const mockFindAll = vi.fn();
+const mockSaveAll = vi.fn();
+
+const mockRepo: ISubmissionRepository = {
+  save: vi.fn(),
+  findAll: mockFindAll,
+  findById: vi.fn(),
+  saveAll: mockSaveAll,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const existing: Submission = {
+  id: 'sub-1',
+  name: 'Old Name',
+  email: 'old@example.com',
+  message: 'Old message',
+  createdAt: '2024-01-01T10:00:00.000Z',
+};
+
+describe('UpdateSubmissionUseCase', () => {
+  it('updates name, email and message while preserving id and createdAt', async () => {
+    mockFindAll.mockResolvedValue([{ ...existing }]);
+    mockSaveAll.mockResolvedValue(undefined);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    const result = await useCase.execute('sub-1', {
+      name: 'New Name',
+      email: 'new@example.com',
+      message: 'New message',
+    });
+
+    expect(result.id).toBe('sub-1');
+    expect(result.name).toBe('New Name');
+    expect(result.email).toBe('new@example.com');
+    expect(result.message).toBe('New message');
+    expect(result.createdAt).toBe('2024-01-01T10:00:00.000Z');
+  });
+
+  it('persists the updated list via saveAll', async () => {
+    mockFindAll.mockResolvedValue([{ ...existing }]);
+    mockSaveAll.mockResolvedValue(undefined);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    await useCase.execute('sub-1', {
+      name: 'New Name',
+      email: 'new@example.com',
+      message: 'Updated',
+    });
+
+    expect(mockSaveAll).toHaveBeenCalledOnce();
+    const saved: Submission[] = mockSaveAll.mock.calls[0][0];
+    expect(saved[0].id).toBe('sub-1');
+    expect(saved[0].name).toBe('New Name');
+  });
+
+  it('throws "Submission not found" when id does not exist', async () => {
+    mockFindAll.mockResolvedValue([{ ...existing }]);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    await expect(
+      useCase.execute('does-not-exist', {
+        name: 'X',
+        email: 'x@x.com',
+        message: 'X',
+      }),
+    ).rejects.toThrow('Submission not found');
+
+    expect(mockSaveAll).not.toHaveBeenCalled();
+  });
+
+  it('throws validation error when updated data is invalid', async () => {
+    mockFindAll.mockResolvedValue([{ ...existing }]);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    await expect(
+      useCase.execute('sub-1', {
+        name: '',
+        email: 'valid@example.com',
+        message: 'Some message',
+      }),
+    ).rejects.toThrow('Name is required');
+
+    expect(mockSaveAll).not.toHaveBeenCalled();
+  });
+
+  it('lowercases the new email', async () => {
+    mockFindAll.mockResolvedValue([{ ...existing }]);
+    mockSaveAll.mockResolvedValue(undefined);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    const result = await useCase.execute('sub-1', {
+      name: 'Ivan',
+      email: 'IVAN@EXAMPLE.COM',
+      message: 'Hello',
+    });
+
+    expect(result.email).toBe('ivan@example.com');
+  });
+
+  it('handles multiple submissions and only updates the matching one', async () => {
+    const second: Submission = {
+      id: 'sub-2',
+      name: 'Other',
+      email: 'other@example.com',
+      message: 'Other message',
+      createdAt: '2024-02-01T10:00:00.000Z',
+    };
+    mockFindAll.mockResolvedValue([{ ...existing }, { ...second }]);
+    mockSaveAll.mockResolvedValue(undefined);
+    const useCase = new UpdateSubmissionUseCase(mockRepo);
+
+    await useCase.execute('sub-1', {
+      name: 'Updated',
+      email: 'updated@example.com',
+      message: 'Updated msg',
+    });
+
+    const saved: Submission[] = mockSaveAll.mock.calls[0][0];
+    const updatedEntry = saved.find(s => s.id === 'sub-1')!;
+    const untouchedEntry = saved.find(s => s.id === 'sub-2')!;
+
+    expect(updatedEntry.name).toBe('Updated');
+    expect(untouchedEntry.name).toBe('Other');
+  });
+});

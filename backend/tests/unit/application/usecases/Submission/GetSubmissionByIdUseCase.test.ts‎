@@ -1,0 +1,58 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GetSubmissionByIdUseCase } from '../../../../../src/application/usecases/Submission/GetSubmissionByIdUseCase';
+import type { ISubmissionRepository } from '../../../../../src/infrastructure/submissions/interfaces/ISubmissionRepository';
+import type { Submission } from '../../../../../src/domain/entities/Submission/Submission';
+
+const mockFindById = vi.fn();
+
+const mockRepo: ISubmissionRepository = {
+  save: vi.fn(),
+  findAll: vi.fn(),
+  findById: mockFindById,
+  saveAll: vi.fn(),
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const stubSubmission: Submission = {
+  id: 'sub-1',
+  name: 'Ivan Ivanov',
+  email: 'ivan@example.com',
+  message: 'Test message',
+  createdAt: '2024-06-01T10:00:00.000Z',
+};
+
+describe('GetSubmissionByIdUseCase', () => {
+  it('returns the submission when found', async () => {
+    mockFindById.mockResolvedValue(stubSubmission);
+    const useCase = new GetSubmissionByIdUseCase(mockRepo);
+
+    const result = await useCase.execute('sub-1');
+
+    expect(mockFindById).toHaveBeenCalledWith('sub-1');
+    expect(result.id).toBe('sub-1');
+    expect(result.name).toBe('Ivan Ivanov');
+    expect(result.email).toBe('ivan@example.com');
+    expect(result.message).toBe('Test message');
+    expect(result.createdAt).toBe('2024-06-01T10:00:00.000Z');
+  });
+
+  it('throws "Submission not found" when repository returns null', async () => {
+    mockFindById.mockResolvedValue(null);
+    const useCase = new GetSubmissionByIdUseCase(mockRepo);
+
+    await expect(useCase.execute('missing-id')).rejects.toThrow('Submission not found');
+    expect(mockFindById).toHaveBeenCalledWith('missing-id');
+  });
+
+  it('passes the id to the repository unchanged', async () => {
+    mockFindById.mockResolvedValue(stubSubmission);
+    const useCase = new GetSubmissionByIdUseCase(mockRepo);
+
+    await useCase.execute('some-custom-id-123');
+
+    expect(mockFindById).toHaveBeenCalledWith('some-custom-id-123');
+  });
+});
